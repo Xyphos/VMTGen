@@ -6,7 +6,7 @@ Valve Material File Generator
 VTFGen is meant to quickly generate material files for your custom textures
 with the least number of clicks and user inputs possible.
 
-### [Download JAR 1.0-BETA](https://raw.github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA.jar)
+### [Download JAR 1.0-BETA](https://github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA.jar?raw=true)
 ####(requires [Java 7](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to run)
 
 # SCREENSHOTS
