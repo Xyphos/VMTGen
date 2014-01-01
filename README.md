@@ -25,3 +25,4 @@ with the least number of clicks and user inputs possible.
 
 ### Supports Animated Textures
 ![Supports Animation](https://raw.github.com/Xyphos/VMTGen/master/doc/material.png)
+
