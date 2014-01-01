@@ -31,5 +31,6 @@ with the least number of clicks and user inputs possible.
 # IMPORTANT FORKING INFORMATION
 This Netbeans project uses [Maven](http://maven.apache.org/) for dependency management.
 While I tried to keep the dependencies lowered to a minimum, here is what you need:
+
 1. [Apache commons-io-1.3.2.jar](http://commons.apache.org/proper/commons-io/download_io.cgi)
 2. [Google guava-14.0.1.jar](https://code.google.com/p/guava-libraries/)
