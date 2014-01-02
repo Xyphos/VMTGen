@@ -1,9 +1,9 @@
 VMTGen
 ======
 
-Valve Material Texture file generator
+Valve Material Type file generator
 
-VMTGen is a tool meant to quickly generate Valve Material Texture files for your
+VMTGen is a tool meant to quickly generate Valve Material Type files for your
 custom textures with the least number of clicks and user inputs possible, while
 allowing settings to be locked and persist between multiple textures.
 (as opposed to having to re-input each texture's settings via VTFEdit.)
