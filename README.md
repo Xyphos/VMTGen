@@ -1,12 +1,14 @@
 VMTGen
 ======
 
-Valve Material File Generator
+Valve Material Texture file generator
 
-VTFGen is meant to quickly generate material files for your custom textures
-with the least number of clicks and user inputs possible.
+VMTGen is a tool meant to quickly generate Valve Material Texture files for your
+custom textures with the least number of clicks and user inputs possible, while
+allowing settings to be locked and persist between multiple textures.
+(as opposed to having to re-input each texture's settings via VTFEdit.)
 
-### [Download JAR 1.0-BETA](https://github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA.jar?raw=true)
+### [Download](https://github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA-rc1.jar?raw=true) 1.0-BETA-rc1 (stand-alone executable)
 ####(requires [Java 7](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to run)
 
 # SCREENSHOTS
@@ -32,5 +34,5 @@ with the least number of clicks and user inputs possible.
 This Netbeans project uses [Maven](http://maven.apache.org/) for dependency management.
 While I tried to keep the dependencies lowered to a minimum, here is what you need:
 
-1. [Apache commons-io-1.3.2.jar](http://commons.apache.org/proper/commons-io/download_io.cgi)
-2. [Google guava-14.0.1.jar](https://code.google.com/p/guava-libraries/)
+1. Apache [commons-io 2.4](http://commons.apache.org/proper/commons-io/download_io.cgi) (uses FilenameUtils)
+2. Google [guava 15.0-rc1](https://code.google.com/p/guava-libraries/) (uses LittleEndianDataInputStream)

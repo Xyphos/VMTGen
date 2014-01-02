@@ -4,11 +4,41 @@
 
     <groupId>com.xyphos</groupId>
     <artifactId>VMTGen</artifactId>
-    <version>1.0-BETA</version>
+    <version>1.0-BETA-rc1</version>
     <packaging>jar</packaging>
 
     <name>VMTGen</name>
-    <url>http://maven.apache.org</url>
+    <inceptionYear>2014</inceptionYear>
+    <url>https://github.com/Xyphos/VMTGen</url>
+    <description>Valve Material Texture file generator</description>
+
+    <issueManagement>
+        <system>ticket</system>
+        <url>https://github.com/Xyphos/VMTGen/issues</url>
+    </issueManagement>
+
+    <distributionManagement>
+        <site>
+            <id>github.website</id>
+            <name>GitHub Site</name>
+            <url>https://github.com/Xyphos/VMTGen</url>
+        </site>
+    </distributionManagement>
+    <developers>
+        <developer>
+            <name>William Scott</name>
+            <id>Xyphos</id>
+            <email>TheGreatXyphos@gmail.com</email>
+            <organization>Xyphos Software</organization>
+            <roles>
+                <role>Original Author</role>
+                <role>Lead Developer</role>
+                <role>Java noob</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <contributors></contributors>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -27,14 +57,54 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>1.3.2</version>
+            <version>2.4</version>
             <type>jar</type>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>14.0.1</version>
+            <version>15.0-rc1</version>
             <type>jar</type>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.xyphos.vmtgen.GUI</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
