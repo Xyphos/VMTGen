@@ -8,7 +8,7 @@ custom textures with the least number of clicks and user inputs possible, while
 allowing settings to be locked and persist between multiple textures.
 (as opposed to having to re-input each texture's settings via VTFEdit.)
 
-### [Download](https://github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA-rc1.jar?raw=true) 1.0-BETA-rc1 (stand-alone executable)
+### [Download](https://github.com/Xyphos/VMTGen/blob/master/target/VMTGen-1.0-BETA-rc3.jar?raw=true) Version 1.0-BETA-rc3 (stand-alone executable)
 ####(requires [Java 7](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to run)
 
 # SCREENSHOTS

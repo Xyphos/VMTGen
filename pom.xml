@@ -4,7 +4,7 @@
 
     <groupId>com.xyphos</groupId>
     <artifactId>VMTGen</artifactId>
-    <version>1.0-BETA-rc1</version>
+    <version>1.0-BETA-rc3</version>
     <packaging>jar</packaging>
 
     <name>VMTGen</name>
@@ -97,6 +97,8 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
+                            <includeGroupIds>commons-io</includeGroupIds>
+                            <includeGroupIds>guava</includeGroupIds>
                             <outputDirectory>${project.build.directory}/lib</outputDirectory>
                             <overWriteReleases>false</overWriteReleases>
                             <overWriteSnapshots>false</overWriteSnapshots>
@@ -104,6 +106,22 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${artifactId}-${version}</finalName>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -34,4 +34,19 @@
                 <exec.executable>${profiler.java}</exec.executable>
             </properties>
         </action>
+        <action>
+            <actionName>build</actionName>
+            <preAction>build-with-dependencies</preAction>
+            <goals>
+                <goal>install</goal>
+            </goals>
+        </action>
+        <action>
+            <actionName>rebuild</actionName>
+            <preAction>build-with-dependencies</preAction>
+            <goals>
+                <goal>clean</goal>
+                <goal>install</goal>
+            </goals>
+        </action>
     </actions>
