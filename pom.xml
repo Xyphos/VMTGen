@@ -4,7 +4,7 @@
 
     <groupId>com.xyphos</groupId>
     <artifactId>VMTGen</artifactId>
-    <version>1.0-BETA-rc3</version>
+    <version>1.1-BETA-rc1</version>
     <packaging>jar</packaging>
 
     <name>VMTGen</name>

@@ -56,13 +56,14 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private static String basePath;
   //
   private static final Map ShaderMap = new HashMap();
-  private static final int ShaderDefault = 4;
+  private static final int ShaderDefault = 5;
   private static final String[] Shaders = {
     //"Custom --->",
-    "Cable", // 0
-    "Decal", // 1
-    "DecalModulate", // 2
-    "LightMappedGeneric", // 3
+    "BaseTimesLightmap",
+    "Cable",
+    "Decal",
+    "DecalModulate",
+    "LightMappedGeneric",
     "Modulate",
     "MonitorScreen",
     "Predator",
@@ -89,6 +90,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     "Concrete",
     "Concrete_Block",
     "Default",
+    "Default_Silent",
     "Dirt",
     "Flesh",
     "Glass",
@@ -102,6 +104,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     "MetalPanel",
     "MetalVent",
     "MudSlipperySlime",
+    "Player_Control_Clip",
     "Porcelain",
     "QuickSand",
     "Rock",
@@ -287,6 +290,9 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     nudFrameRate = new javax.swing.JSpinner();
     chkLockFrameRate = new javax.swing.JCheckBox();
     jLabel7 = new javax.swing.JLabel();
+    chkLockAlpha = new javax.swing.JCheckBox();
+    jLabel19 = new javax.swing.JLabel();
+    nudAlpha = new javax.swing.JSpinner();
     panFiles = new javax.swing.JPanel();
     chkOnlyMissing = new javax.swing.JCheckBox();
     jScrollPane1 = new javax.swing.JScrollPane();
@@ -298,7 +304,23 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     jLabel22 = new javax.swing.JLabel();
     jLabel23 = new javax.swing.JLabel();
     jLabel25 = new javax.swing.JLabel();
-    jLabel24 = new javax.swing.JLabel();
+    jPanel2 = new javax.swing.JPanel();
+    chkCompileTrigger = new javax.swing.JCheckBox();
+    chkCompileSky = new javax.swing.JCheckBox();
+    chkCompileSkip = new javax.swing.JCheckBox();
+    chkCompilePlayerClip = new javax.swing.JCheckBox();
+    chkCompileNoDraw = new javax.swing.JCheckBox();
+    chkCompilePassBullets = new javax.swing.JCheckBox();
+    chkCompileOrigin = new javax.swing.JCheckBox();
+    chkCompileNoLight = new javax.swing.JCheckBox();
+    chkCompileNpcClip = new javax.swing.JCheckBox();
+    chkCompileLadder = new javax.swing.JCheckBox();
+    chkCompileHint = new javax.swing.JCheckBox();
+    chkCompileNonSolid = new javax.swing.JCheckBox();
+    chkCompileDetail = new javax.swing.JCheckBox();
+    chkCompileClip = new javax.swing.JCheckBox();
+    chkCompileFog = new javax.swing.JCheckBox();
+    chkCompilePlayerControlClip = new javax.swing.JCheckBox();
 
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     setTitle("VMTGen");
@@ -796,6 +818,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       }
     });
 
+    cmbShader.setPreferredSize(new java.awt.Dimension(100, 22));
     cmbShader.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(java.awt.event.ActionEvent evt) {
         cmbShaderActionPerformed(evt);
@@ -804,6 +827,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     txtShader.setDisabledTextColor(new java.awt.Color(255, 0, 0));
     txtShader.setEnabled(false);
+    txtShader.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel3.setText("Shader");
 
@@ -827,6 +851,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       }
     });
 
+    cmbSurface1.setPreferredSize(new java.awt.Dimension(100, 22));
     cmbSurface1.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(java.awt.event.ActionEvent evt) {
         cmbSurface1ActionPerformed(evt);
@@ -835,9 +860,11 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     txtSurface1.setDisabledTextColor(new java.awt.Color(255, 0, 0));
     txtSurface1.setEnabled(false);
+    txtSurface1.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel5.setText("Surface 2");
 
+    cmbSurface2.setPreferredSize(new java.awt.Dimension(100, 22));
     cmbSurface2.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(java.awt.event.ActionEvent evt) {
         cmbSurface2ActionPerformed(evt);
@@ -846,6 +873,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     txtSurface2.setDisabledTextColor(new java.awt.Color(255, 0, 0));
     txtSurface2.setEnabled(false);
+    txtSurface2.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel6.setText("Keywords");
 
@@ -861,6 +889,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     nudFrameRate.setModel(new javax.swing.SpinnerNumberModel(0, 0, 999999, 1));
     nudFrameRate.setEnabled(false);
+    nudFrameRate.setPreferredSize(new java.awt.Dimension(80, 18));
 
     chkLockFrameRate.setEnabled(false);
     chkLockFrameRate.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
@@ -873,61 +902,86 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     jLabel7.setText("Frame Rate");
 
+    chkLockAlpha.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
+    chkLockAlpha.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
+
+    jLabel19.setText("Alpha");
+
+    nudAlpha.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.01f)));
+    nudAlpha.setPreferredSize(new java.awt.Dimension(80, 18));
+
     javax.swing.GroupLayout panOptionsLayout = new javax.swing.GroupLayout(panOptions);
     panOptions.setLayout(panOptionsLayout);
     panOptionsLayout.setHorizontalGroup(
       panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(panOptionsLayout.createSequentialGroup()
         .addContainerGap()
-        .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+        .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
           .addGroup(panOptionsLayout.createSequentialGroup()
             .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(chkLockShader)
               .addComponent(chkLockSurface1)
               .addComponent(chkLockSurface2)
-              .addComponent(chkLockKeywords)
-              .addComponent(chkLockFrameRate))
+              .addComponent(chkLockKeywords))
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
             .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-              .addComponent(jLabel4)
-              .addComponent(jLabel5)
-              .addComponent(jLabel6)
-              .addComponent(jLabel7))
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-              .addComponent(cmbSurface2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-              .addComponent(cmbSurface1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-              .addComponent(txtKeywords)
-              .addComponent(nudFrameRate, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)))
+              .addGroup(panOptionsLayout.createSequentialGroup()
+                .addComponent(jLabel6)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                  .addGroup(panOptionsLayout.createSequentialGroup()
+                    .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGap(0, 0, Short.MAX_VALUE))
+                  .addComponent(txtKeywords)))
+              .addGroup(panOptionsLayout.createSequentialGroup()
+                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                  .addGroup(panOptionsLayout.createSequentialGroup()
+                    .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                      .addComponent(jLabel4)
+                      .addComponent(jLabel3))
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                      .addComponent(cmbShader, 0, 151, Short.MAX_VALUE)
+                      .addComponent(cmbSurface1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                  .addGroup(panOptionsLayout.createSequentialGroup()
+                    .addComponent(jLabel5)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(cmbSurface2, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                  .addComponent(txtSurface2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                  .addComponent(txtSurface1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                  .addGroup(panOptionsLayout.createSequentialGroup()
+                    .addComponent(chkLockFrameRate)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(jLabel7)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGap(0, 0, Short.MAX_VALUE))
+                  .addComponent(txtShader, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))
           .addGroup(panOptionsLayout.createSequentialGroup()
-            .addComponent(chkLockShader)
+            .addComponent(chkLockAlpha)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jLabel3)
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 26, Short.MAX_VALUE)
-            .addComponent(cmbShader, javax.swing.GroupLayout.PREFERRED_SIZE, 189, javax.swing.GroupLayout.PREFERRED_SIZE)))
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-          .addComponent(txtShader)
-          .addComponent(txtSurface1)
-          .addComponent(txtSurface2, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE))
-        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jLabel19)))
+        .addContainerGap())
     );
     panOptionsLayout.setVerticalGroup(
       panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(panOptionsLayout.createSequentialGroup()
         .addContainerGap()
         .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(chkLockShader, javax.swing.GroupLayout.Alignment.TRAILING)
-          .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
             .addComponent(jLabel3)
             .addComponent(cmbShader, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addComponent(txtShader, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+            .addComponent(txtShader, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addComponent(chkLockShader))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
         .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(jLabel4)
+          .addComponent(chkLockSurface1)
           .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-            .addComponent(cmbSurface1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addComponent(jLabel4)
-            .addComponent(txtSurface1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-          .addComponent(chkLockSurface1))
+            .addComponent(txtSurface1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(cmbSurface1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
         .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
           .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -943,11 +997,14 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
           .addComponent(chkLockKeywords))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
         .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(jLabel19)
+          .addComponent(chkLockAlpha)
           .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
             .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addComponent(jLabel7))
+          .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
           .addComponent(chkLockFrameRate))
-        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        .addContainerGap(22, Short.MAX_VALUE))
     );
 
     panFiles.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Texture Files"));
@@ -1010,78 +1067,197 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       .addGroup(jPanel1Layout.createSequentialGroup()
         .addContainerGap()
         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(jLabel21)
           .addComponent(jLabel18)
-          .addComponent(jLabel20)
-          .addComponent(jLabel23)
-          .addComponent(jLabel25)
+          .addComponent(jLabel23))
+        .addGap(18, 18, 18)
+        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(jLabel21)
           .addComponent(jLabel22))
+        .addGap(18, 18, 18)
+        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(jLabel25)
+          .addComponent(jLabel20))
         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
     jPanel1Layout.setVerticalGroup(
       jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(jPanel1Layout.createSequentialGroup()
         .addContainerGap()
-        .addComponent(jLabel18)
+        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(jLabel18)
+          .addComponent(jLabel21)
+          .addComponent(jLabel20))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jLabel21)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jLabel20)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jLabel23)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jLabel22)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jLabel25)
+        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(jLabel23)
+          .addComponent(jLabel22)
+          .addComponent(jLabel25))
         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
 
-    jLabel24.setIcon(new javax.swing.ImageIcon(getClass().getResource("/logo.png"))); // NOI18N
+    jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Compile Flags"));
+
+    chkCompileTrigger.setText("Trigger");
+
+    chkCompileSky.setText("Sky");
+
+    chkCompileSkip.setText("Skip");
+
+    chkCompilePlayerClip.setText("Player Clip");
+
+    chkCompileNoDraw.setText("No Draw");
+
+    chkCompilePassBullets.setText("Pass Bullets");
+
+    chkCompileOrigin.setText("Origin");
+
+    chkCompileNoLight.setText("No Light");
+
+    chkCompileNpcClip.setText("NPC Clip");
+
+    chkCompileLadder.setText("Ladder");
+
+    chkCompileHint.setText("Hint");
+
+    chkCompileNonSolid.setText("Non-Solid");
+
+    chkCompileDetail.setText("Detail");
+
+    chkCompileClip.setText("Clip");
+
+    chkCompileFog.setText("Fog");
+
+    chkCompilePlayerControlClip.setText("Player Control Clip");
+
+    javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+    jPanel2.setLayout(jPanel2Layout);
+    jPanel2Layout.setHorizontalGroup(
+      jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+      .addGroup(jPanel2Layout.createSequentialGroup()
+        .addContainerGap()
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel2Layout.createSequentialGroup()
+            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(chkCompileClip)
+              .addComponent(chkCompileNoLight)
+              .addComponent(chkCompileNonSolid)
+              .addComponent(chkCompileDetail)
+              .addComponent(chkCompileHint)
+              .addComponent(chkCompileNoDraw)
+              .addComponent(chkCompileLadder))
+            .addGap(18, 18, 18)
+            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(chkCompilePlayerClip)
+              .addComponent(chkCompileSkip)
+              .addComponent(chkCompileSky)
+              .addComponent(chkCompileTrigger)
+              .addComponent(chkCompileOrigin)
+              .addComponent(chkCompilePassBullets)
+              .addComponent(chkCompileNpcClip)
+              .addComponent(chkCompilePlayerControlClip)))
+          .addComponent(chkCompileFog))
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+    );
+    jPanel2Layout.setVerticalGroup(
+      jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+      .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+        .addContainerGap()
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileClip)
+          .addComponent(chkCompileNpcClip))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileDetail)
+          .addComponent(chkCompileOrigin))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileFog)
+          .addComponent(chkCompilePassBullets))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileHint)
+          .addComponent(chkCompilePlayerClip))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompilePlayerControlClip)
+          .addComponent(chkCompileLadder))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileSkip)
+          .addComponent(chkCompileNoDraw))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileSky)
+          .addComponent(chkCompileNoLight))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkCompileTrigger)
+          .addComponent(chkCompileNonSolid))
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+    );
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
     getContentPane().setLayout(layout);
     layout.setHorizontalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addComponent(panFolders, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-      .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-        .addGap(0, 0, Short.MAX_VALUE)
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-          .addGroup(layout.createSequentialGroup()
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-              .addComponent(panTexture, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-              .addComponent(jLabel24, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-              .addComponent(panFlags, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-              .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-          .addGroup(layout.createSequentialGroup()
+      .addGroup(layout.createSequentialGroup()
+        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+          .addComponent(panTexture, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+          .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
             .addComponent(panFiles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(panOptions, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-        .addGap(0, 0, 0))
+            .addComponent(panOptions, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(panFlags, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+          .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
     );
     layout.setVerticalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(layout.createSequentialGroup()
         .addComponent(panFolders, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-          .addComponent(panOptions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-          .addComponent(panFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-          .addGroup(layout.createSequentialGroup()
-            .addComponent(panTexture, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jLabel24, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
           .addGroup(layout.createSequentialGroup()
             .addComponent(panFlags, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+          .addGroup(layout.createSequentialGroup()
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+              .addComponent(panOptions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+              .addComponent(panFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+            .addComponent(panTexture, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+        .addGap(0, 0, 0))
     );
 
     pack();
   }// </editor-fold>//GEN-END:initComponents
+
+  private void WriteText ( PrintWriter out,
+                           boolean condition,
+                           int padding,
+                           String textureName,
+                           String textureValue ) {
+
+    if ( condition ) {
+      out.printf( "\t\"%s\"\t\t", textureName );
+      for ( int i = 0; i < padding; i++ ) {
+        out.print( "\t" );
+      }
+      out.printf( "\"%s\"\r\n", textureValue );
+    }
+  }
+
+  private void WriteFlag ( PrintWriter out, boolean condition, String flagName ) {
+    if ( condition ) {
+      out.printf( "\t\"%s\"\t\t1\r\n", flagName );
+    }
+  }
 
   private void GenerateVMT () {
     if ( -1 == lstFiles.getSelectedIndex() ) {
@@ -1104,13 +1280,8 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       out.printf( "\"%s\"\r\n", file );
       out.println( "{" );
 
-      if ( !( file = txtKeywords.getText() ).isEmpty() ) {
-        out.printf( "\t\"%%keywords\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtToolTexture.getText() ).isEmpty() ) {
-        out.printf( "\t\"%%toolTexture\"\t\t\"%s\"\r\n", file );
-      }
+      WriteText( out, !( file = txtKeywords.getText() ).isEmpty(), 0, "%keywords", file );
+      WriteText( out, !( file = txtToolTexture.getText() ).isEmpty(), 0, "%toolTexture", file );
 
       int index = cmbSurface1.getSelectedIndex();
       if ( 0 != index ) {
@@ -1130,77 +1301,43 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         out.printf( "\t\"$surfaceProp2\"\t\t\"%s\"\r\n", file );
       }
 
-      if ( !( file = txtBaseTexture1.getText() ).isEmpty() ) {
-        out.printf( "\t\"$baseTexture\"\t\t\"%s\"\r\n", file );
+      if ( !( file = nudAlpha.getValue().toString() ).equals( "1.0" ) ) {
+        out.printf( "\t\"$alpha\"\t\t\t\"%s\"\r\n", file );
       }
 
-      if ( !( file = txtBaseTexture2.getText() ).isEmpty() ) {
-        out.printf( "\t\"$baseTexture2\"\t\t\"%s\"\r\n", file );
-      }
+      WriteText( out, !( file = txtBaseTexture1.getText() ).isEmpty(), 0, "$baseTexture", file );
+      WriteText( out, !( file = txtBaseTexture2.getText() ).isEmpty(), 0, "$baseTexture2", file );
+      WriteText( out, !( file = txtDetailTexture.getText() ).isEmpty(), 1, "$detail", file );
+      WriteText( out, !( file = txtBumpMap1.getText() ).isEmpty(), 0, "$bumpMap", file );
+      WriteText( out, !( file = txtBumpMap2.getText() ).isEmpty(), 0, "$bumpMap2", file );
+      WriteText( out, !( file = txtEnvMap.getText() ).isEmpty(), 0, "$envMap", file );
+      WriteText( out, !( file = txtEnvMapMask.getText() ).isEmpty(), 0, "$envMapMask", file );
+      WriteText( out, !( file = txtNormalMap.getText() ).isEmpty(), 0, "$normalMap", file );
+      WriteText( out, !( file = txtDuDvMap.getText() ).isEmpty(), 0, "$DuDvMap", file );
 
-      if ( !( file = txtDetailTexture.getText() ).isEmpty() ) {
-        out.printf( "\t\"$detail\"\t\t\t\"%s\"\r\n", file );
-      }
+      WriteFlag( out, chkAdditive.isSelected(), "$additive" );
+      WriteFlag( out, chkAlphaTest.isSelected(), "$alphaTest" );
+      WriteFlag( out, chkEnvMapContrast.isSelected(), "$envMapContrast" );
+      WriteFlag( out, chkEnvMapSaturation.isSelected(), "$envMapSaturation" );
+      WriteFlag( out, chkNoCull.isSelected(), "$noCull" );
+      WriteFlag( out, chkNoLOD.isSelected(), "$noLOD" );
+      WriteFlag( out, chkTranslucent.isSelected(), "$translucent" );
+      WriteFlag( out, chkVertexAlpha.isSelected(), "$vertexAlpha" );
+      WriteFlag( out, chkVertexColor.isSelected(), "$vertexColor" );
 
-      if ( !( file = txtBumpMap1.getText() ).isEmpty() ) {
-        out.printf( "\t\"$bumpMap\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtBumpMap2.getText() ).isEmpty() ) {
-        out.printf( "\t\"$bumpMap2\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtEnvMap.getText() ).isEmpty() ) {
-        out.printf( "\t\"$envMap\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtEnvMapMask.getText() ).isEmpty() ) {
-        out.printf( "\t\"$envMapMask\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtNormalMap.getText() ).isEmpty() ) {
-        out.printf( "\t\"$normalMap\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = txtDuDvMap.getText() ).isEmpty() ) {
-        out.printf( "\t\"$DuDvMap\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( chkAdditive.isSelected() ) {
-        out.print( "\t\"$additive\"\t\t1\r\n" );
-      }
-
-      if ( chkAlphaTest.isSelected() ) {
-        out.print( "\t\"$alphaTest\"\t\t1\r\n" );
-      }
-
-      if ( chkEnvMapContrast.isSelected() ) {
-        out.print( "\t\"$envMapContrast\"\t\t1\r\n" );
-      }
-
-      if ( chkEnvMapSaturation.isSelected() ) {
-        out.print( "\t\"$envMapSaturation\"\t1\r\n" );
-      }
-
-      if ( chkNoCull.isSelected() ) {
-        out.print( "\t\"$noCull\"\t\t\t1\r\n" );
-      }
-
-      if ( chkNoLOD.isSelected() ) {
-        out.print( "\t\"$noLOD\"\t\t1\r\n" );
-      }
-
-      if ( chkTranslucent.isSelected() ) {
-        out.print( "\t\"$translucent\"\t\t1\r\n" );
-      }
-
-      if ( chkVertexAlpha.isSelected() ) {
-        out.print( "\t\"$vertexAlpha\"\t\t1\r\n" );
-      }
-
-      if ( chkVertexColor.isSelected() ) {
-        out.print( "\t\"$vertexColor\"\t\t1\r\n" );
-      }
+      WriteFlag( out, chkCompileClip.isSelected(), "%compileClip" );
+      WriteFlag( out, chkCompileDetail.isSelected(), "%compileDetail" );
+      WriteFlag( out, chkCompileHint.isSelected(), "%compileHint" );
+      WriteFlag( out, chkCompileLadder.isSelected(), "%compileLadder" );
+      WriteFlag( out, chkCompileNoDraw.isSelected(), "%compileNoDraw" );
+      WriteFlag( out, chkCompileNonSolid.isSelected(), "%compileNonSolid" );
+      WriteFlag( out, chkCompileNpcClip.isSelected(), "%compileNpcClip" );
+      WriteFlag( out, chkCompilePassBullets.isSelected(), "%compilePassBullets" );
+      WriteFlag( out, chkCompilePlayerClip.isSelected(), "%compilePlayerClip" );
+      WriteFlag( out, chkCompilePlayerControlClip.isSelected(), "%compilePlayerControlClip" );
+      WriteFlag( out, chkCompileSkip.isSelected(), "%compileSkip" );
+      WriteFlag( out, chkCompileSky.isSelected(), "%compileSky" );
+      WriteFlag( out, chkCompileTrigger.isSelected(), "%compileTrigger" );
 
       if ( animated ) {
         file = nudFrameRate.getValue().toString();
@@ -1239,6 +1376,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     SetEnvMapMask( EMPTY_STRING );
     SetNormalMap( EMPTY_STRING );
     SetDuDvMap( EMPTY_STRING );
+
     chkAdditive.setSelected( false );
     chkAlphaTest.setSelected( false );
     chkEnvMapContrast.setSelected( false );
@@ -1247,6 +1385,23 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     chkNoDecal.setSelected( false );
     chkVertexAlpha.setSelected( false );
     chkVertexColor.setSelected( false );
+
+    chkCompileClip.setSelected( false );
+    chkCompileDetail.setSelected( false );
+    chkCompileFog.setSelected( false );
+    chkCompileHint.setSelected( false );
+    chkCompileLadder.setSelected( false );
+    chkCompileNoDraw.setSelected( false );
+    chkCompileNoLight.setSelected( false );
+    chkCompileNonSolid.setSelected( false );
+    chkCompileNpcClip.setSelected( false );
+    chkCompileOrigin.setSelected( false );
+    chkCompilePassBullets.setSelected( false );
+    chkCompilePlayerClip.setSelected( false );
+    chkCompilePlayerControlClip.setSelected( false );
+    chkCompileSkip.setSelected( false );
+    chkCompileSky.setSelected( false );
+    chkCompileTrigger.setSelected( false );
   }
 
   private void ToggleAllLocks () {
@@ -1458,7 +1613,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         name = file.getName();
         ext = FilenameUtils.getExtension( name );
         if ( file.isFile() && ext.equalsIgnoreCase( "vtf" ) ) {
-          model.addElement( file.getName() );
+          model.addElement( name );
         }
       }
     }
@@ -1790,6 +1945,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   public static void main ( String args[] ) {
     try {
       javax.swing.UIManager.setLookAndFeel( javax.swing.UIManager.getCrossPlatformLookAndFeelClassName() );
+
+
+
+
     } catch ( ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex ) {
       Logger.getLogger( GUI.class
         .getName() ).log( Level.SEVERE, null, ex );
@@ -1819,8 +1978,25 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JButton btnWorkFolderBrowse;
   private javax.swing.JCheckBox chkAdditive;
   private javax.swing.JCheckBox chkAlphaTest;
+  private javax.swing.JCheckBox chkCompileClip;
+  private javax.swing.JCheckBox chkCompileDetail;
+  private javax.swing.JCheckBox chkCompileFog;
+  private javax.swing.JCheckBox chkCompileHint;
+  private javax.swing.JCheckBox chkCompileLadder;
+  private javax.swing.JCheckBox chkCompileNoDraw;
+  private javax.swing.JCheckBox chkCompileNoLight;
+  private javax.swing.JCheckBox chkCompileNonSolid;
+  private javax.swing.JCheckBox chkCompileNpcClip;
+  private javax.swing.JCheckBox chkCompileOrigin;
+  private javax.swing.JCheckBox chkCompilePassBullets;
+  private javax.swing.JCheckBox chkCompilePlayerClip;
+  private javax.swing.JCheckBox chkCompilePlayerControlClip;
+  private javax.swing.JCheckBox chkCompileSkip;
+  private javax.swing.JCheckBox chkCompileSky;
+  private javax.swing.JCheckBox chkCompileTrigger;
   private javax.swing.JCheckBox chkEnvMapContrast;
   private javax.swing.JCheckBox chkEnvMapSaturation;
+  private javax.swing.JCheckBox chkLockAlpha;
   private javax.swing.JCheckBox chkLockBaseTexture1;
   private javax.swing.JCheckBox chkLockBaseTexture2;
   private javax.swing.JCheckBox chkLockBumpMap1;
@@ -1856,12 +2032,12 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JLabel jLabel16;
   private javax.swing.JLabel jLabel17;
   private javax.swing.JLabel jLabel18;
+  private javax.swing.JLabel jLabel19;
   private javax.swing.JLabel jLabel2;
   private javax.swing.JLabel jLabel20;
   private javax.swing.JLabel jLabel21;
   private javax.swing.JLabel jLabel22;
   private javax.swing.JLabel jLabel23;
-  private javax.swing.JLabel jLabel24;
   private javax.swing.JLabel jLabel25;
   private javax.swing.JLabel jLabel3;
   private javax.swing.JLabel jLabel4;
@@ -1871,8 +2047,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JLabel jLabel8;
   private javax.swing.JLabel jLabel9;
   private javax.swing.JPanel jPanel1;
+  private javax.swing.JPanel jPanel2;
   private javax.swing.JScrollPane jScrollPane1;
   private javax.swing.JList lstFiles;
+  private javax.swing.JSpinner nudAlpha;
   private javax.swing.JSpinner nudFrameRate;
   private javax.swing.JPanel panFiles;
   private javax.swing.JPanel panFlags;
