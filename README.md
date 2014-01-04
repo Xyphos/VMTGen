@@ -8,7 +8,7 @@ custom textures with the least number of clicks and user inputs possible, while
 allowing settings to be locked and persist between multiple textures.
 (as opposed to having to re-input each texture's settings via VTFEdit.)
 
-### [Download](https://github.com/Xyphos/VMTGen/releases/tag/1.1-BETA-rc2) Version 1.1-BETA-rc2 (stand-alone executable)
+### [Download](https://github.com/Xyphos/VMTGen/releases/tag/1.1-BETA-rc3) Version 1.1-BETA-rc3 (stand-alone executable)
 ####(requires [Java 7](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to run)
 
 # SCREENSHOTS
@@ -28,9 +28,9 @@ allowing settings to be locked and persist between multiple textures.
 ### Supports Animated Textures
 ![Supports Animation](https://raw.github.com/Xyphos/VMTGen/master/doc/material.png)
 
+======
 
-
-# IMPORTANT FORKING INFORMATION
+## IMPORTANT FORKING INFORMATION
 This Netbeans project uses [Maven](http://maven.apache.org/) for dependency management.
 While I tried to keep the dependencies lowered to a minimum, here is what you need:
 

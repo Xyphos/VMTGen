@@ -1345,9 +1345,9 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         out.print( "\t{\r\n" );
         out.print( "\t\t\"animatedTexture\"\r\n" );
         out.print( "\t\t{\r\n" );
-        out.print( "\t\t\t\"$animatedTextureVar\"\t\t\"$baseTexture\"\r\n" );
-        out.print( "\t\t\t\"$animatedTextureFrameNumVar\"\t\"$frame\"\r\n" );
-        out.printf( "\t\t\t\"$animatedTextureFrameRate\"\t%s\r\n", file );
+        out.print( "\t\t\t\"animatedTextureVar\"\t\t\"$baseTexture\"\r\n" );
+        out.print( "\t\t\t\"animatedTextureFrameNumVar\"\t\"$frame\"\r\n" );
+        out.printf( "\t\t\t\"animatedTextureFrameRate\"\t\t%s\r\n", file );
         out.print( "\t\t}\r\n" );
         out.print( "\t}\r\n" );
       }
