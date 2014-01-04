@@ -1346,7 +1346,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         out.print( "\t\t\"animatedTexture\"\r\n" );
         out.print( "\t\t{\r\n" );
         out.print( "\t\t\t\"$animatedTextureVar\"\t\t\"$baseTexture\"\r\n" );
-        out.print( "\t\t\t\"$animatedTextureFrameVar\"\t\t\"$frame\"\r\n" );
+        out.print( "\t\t\t\"$animatedTextureFrameNumVar\"\t\"$frame\"\r\n" );
         out.printf( "\t\t\t\"$animatedTextureFrameRate\"\t%s\r\n", file );
         out.print( "\t\t}\r\n" );
         out.print( "\t}\r\n" );
@@ -1896,6 +1896,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private void lstFilesValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_lstFilesValueChanged
     if ( !evt.getValueIsAdjusting() && ( -1 != lstFiles.getSelectedIndex() ) ) {
       String file = lstFiles.getSelectedValue().toString();
+
+      // set keywords based on file name
+      SetKeywords( FilenameUtils.getBaseName( file ).replace( "_", "," ).replace( "-", "," ) );
+
       String path = FilenameUtils.separatorsToUnix(
         FilenameUtils.concat( basePath,
                               FilenameUtils.getBaseName( file ) ) )
