@@ -32,102 +32,63 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.*;
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 import java.util.logging.*;
 import java.util.prefs.Preferences;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import org.apache.commons.io.FilenameUtils;
 
 
 
 /**
-
  @author William Scott, Xyphos Software
  */
 public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private static final Logger logger = Logger.getLogger( GUI.class.getName() );
+  private static final Locale locale = Locale.US;
   //
-  private static final Preferences preferences = Preferences.userNodeForPackage( GUI.class );
+  private static final Preferences preferences = Preferences
+    .userNodeForPackage( GUI.class );
   private static final String pref_ROOT = "ROOT_FOLDER";
   private static final String pref_WORK = "WORK_FOLDER";
   //
-  private static String rootPath;
-  private static String workPath;
-  private static String basePath;
+  private String rootPath;
+  private String workPath;
+  private String basePath;
   //
   private static final Map ShaderMap = new HashMap();
   private static final int ShaderDefault = 5;
   private static final String[] Shaders = {
-    //"Custom --->",
-    "BaseTimesLightmap",
-    "Cable",
-    "Decal",
-    "DecalModulate",
-    "LightMappedGeneric",
-    "Modulate",
-    "MonitorScreen",
-    "Predator",
-    "Refract",
-    "ShatteredGlass",
-    "Sprite",
-    "UnlitGeneric",
-    "VertexLitGeneric",
-    "Water", };
+    // "Custom --->",
+    "BaseTimesLightmap", "Cable", "Decal", "DecalModulate",
+    "LightMappedGeneric", "Modulate", "MonitorScreen", "Predator",
+    "Refract", "ShatteredGlass", "Sprite", "UnlitGeneric",
+    "VertexLitGeneric", "Water", };
   //
   private static final Map SurfaceMap = new HashMap();
   private static final int SurfaceDefault = 12;
   private static final String[] Surfaces = {
-    //"--- NONE ---",
-    //"Custom --->",
-    "AlienFlesh",
-    "ArmorFlesh",
-    "BloodyFlesh",
-    "Boulder",
-    "Brick",
-    "Chain",
-    "ChainLink",
-    "Computer",
-    "Concrete",
-    "Concrete_Block",
-    "Default",
-    "Default_Silent",
-    "Dirt",
-    "Flesh",
-    "Glass",
-    "Grass",
-    "Gravel",
-    "Ice",
-    "Ladder",
-    "Metal_Box",
-    "Metal",
-    "MetalGrate",
-    "MetalPanel",
-    "MetalVent",
-    "MudSlipperySlime",
-    "Player_Control_Clip",
-    "Porcelain",
-    "QuickSand",
-    "Rock",
-    "Slime",
-    "SlipperyMetal",
-    "Snow",
-    "SolidMetal",
-    "Tile",
-    "Wade",
-    "Water",
-    "WaterMelon",
-    "Wood_Box",
-    "Wood_Crate",
-    "Wood_Furniture",
-    "Wood_Panel",
-    "Wood_Plank",
-    "Wood_Solid",
-    "WoodWood_LowDensity", };
+    // "--- NONE ---",
+    // "Custom --->",
+    "AlienFlesh", "ArmorFlesh", "BloodyFlesh", "Boulder", "Brick",
+    "Chain", "ChainLink", "Computer", "Concrete", "Concrete_Block",
+    "Default", "Default_Silent", "Dirt", "Flesh", "Glass", "Grass",
+    "Gravel", "Ice", "Ladder", "Metal_Box", "Metal", "MetalGrate",
+    "MetalPanel", "MetalVent", "MudSlipperySlime",
+    "Player_Control_Clip", "Porcelain", "QuickSand", "Rock", "Slime",
+    "SlipperyMetal", "Snow", "SolidMetal", "Tile", "Wade", "Water",
+    "WaterMelon", "Wood_Box", "Wood_Crate", "Wood_Furniture",
+    "Wood_Panel", "Wood_Plank", "Wood_Solid", "WoodWood_LowDensity", };
   //
-  private static final int SIGNATURE_VTF = 0x00465456; // 56 54 46 00   V T F .
-  private static boolean animated = false;
+  private static final int SIGNATURE_VTF = 0x00465456; // 56 54 46 00 V T F .
+  private boolean animated = false;
+  private int frameCount = 0;
   //
   private static final String EMPTY_STRING = "";
+  private Clip clipBlip;
 
   /**
    Creates new form GUI
@@ -135,18 +96,19 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   public GUI () {
     initComponents();
 
-    // Global keyboard hook
-    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher( this );
-
     // Minor hack for better readability of disabled combo boxes;
     UIManager.put( "ComboBox.disabledForeground", Color.RED );
-
+    lafSpinner( nudAlpha );
+    lafSpinner( nudFrameRate );
+    lafSpinner( nudEnvMapContrast );
+    lafSpinner( nudEnvMapSaturation );
+    lafSpinner( nudEnvMapFrame );
 
     int i = 1;
     cmbShader.addItem( "Custom --->" );
     for ( String item : Shaders ) {
       cmbShader.addItem( item );
-      ShaderMap.put( item.toUpperCase(), i++ );
+      ShaderMap.put( item.toUpperCase( locale ), i++ );
     }
     cmbShader.setSelectedIndex( ShaderDefault );
 
@@ -159,15 +121,227 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     for ( String item : Surfaces ) {
       cmbSurface1.addItem( item );
       cmbSurface2.addItem( item );
-      SurfaceMap.put( item.toUpperCase(), i++ );
+      SurfaceMap.put( item.toUpperCase( locale ), i++ );
     }
     cmbSurface1.setSelectedIndex( SurfaceDefault );
     cmbSurface2.setSelectedIndex( 0 );
 
     txtRootFolder.setText( rootPath = preferences.get( pref_ROOT, "" ) );
     txtWorkFolder.setText( workPath = preferences.get( pref_WORK, "" ) );
-    ShowTextureFiles();
+    showTextureFiles();
   }
+
+  private void btnBaseTexture1ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnBaseTexture1ActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setBaseTexture1( path );
+    }
+  }// GEN-LAST:event_btnBaseTexture1ActionPerformed
+
+  private void btnBaseTexture2ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnBaseTexture2ActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setBaseTexture2( path );
+    }
+  }// GEN-LAST:event_btnBaseTexture2ActionPerformed
+
+  private void btnBumpMap1ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnBumpMap1ActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setBumpMap1( path );
+    }
+  }// GEN-LAST:event_btnBumpMap1ActionPerformed
+
+  private void btnBumpMap2ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnBumpMap2ActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setBumpMap2( path );
+    }
+  }// GEN-LAST:event_btnBumpMap2ActionPerformed
+
+  private void btnDetailTextureActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnDetailTextureActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setDetailTexture( path );
+    }
+  }// GEN-LAST:event_btnDetailTextureActionPerformed
+
+  private void btnDuDvMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnDuDvMapActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setDuDvMap( path );
+    }
+  }// GEN-LAST:event_btnDuDvMapActionPerformed
+
+  private void btnEnvMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnEnvMapActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setEnvMap( path );
+    }
+  }// GEN-LAST:event_btnEnvMapActionPerformed
+
+  private void btnEnvMapMaskActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnEnvMapMaskActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setEnvMapMask( path );
+    }
+  }// GEN-LAST:event_btnEnvMapMaskActionPerformed
+
+  private void btnNormalMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnNormalMapActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setNormalMap( path );
+    }
+  }// GEN-LAST:event_btnNormalMapActionPerformed
+
+  private void btnRootFolderBrowseActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnRootFolderBrowseActionPerformed
+    JFileChooser fc = new JFileChooser();
+    fc.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
+    int result = fc.showOpenDialog( this );
+    if ( JFileChooser.APPROVE_OPTION == result ) {
+      rootPath = fc.getSelectedFile().getAbsolutePath();
+      txtRootFolder.setText( rootPath );
+      preferences.put( pref_ROOT, rootPath );
+      showTextureFiles();
+    }
+  }// GEN-LAST:event_btnRootFolderBrowseActionPerformed
+
+  private void btnToolTextureActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnToolTextureActionPerformed
+    String path = selectVTF();
+    if ( null != path ) {
+      setToolTexture( path );
+    }
+  }// GEN-LAST:event_btnToolTextureActionPerformed
+
+  private void btnWorkFolderBrowseActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_btnWorkFolderBrowseActionPerformed
+    File dir = new File( rootPath );
+    JFileChooser fc = new JFileChooser( dir );
+    fc.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
+    int result = fc.showOpenDialog( this );
+    if ( JFileChooser.APPROVE_OPTION == result ) {
+      workPath = fc.getSelectedFile().getAbsolutePath();
+      txtWorkFolder.setText( workPath );
+      preferences.put( pref_WORK, workPath );
+      showTextureFiles();
+    }
+  }// GEN-LAST:event_btnWorkFolderBrowseActionPerformed
+
+  private void chkLockAlphaActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockAlphaActionPerformed
+    nudAlpha.setEnabled( !chkLockAlpha.isSelected() );
+  }// GEN-LAST:event_chkLockAlphaActionPerformed
+
+  private void chkLockBaseTexture1ActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockBaseTexture1ActionPerformed
+    txtBaseTexture1.setEnabled( !chkLockBaseTexture1.isSelected() );
+    btnBaseTexture1.setEnabled( !chkLockBaseTexture1.isSelected() );
+  }// GEN-LAST:event_chkLockBaseTexture1ActionPerformed
+
+  private void chkLockBaseTexture2ActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockBaseTexture2ActionPerformed
+    txtBaseTexture2.setEnabled( !chkLockBaseTexture2.isSelected() );
+    btnBaseTexture2.setEnabled( !chkLockBaseTexture2.isSelected() );
+  }// GEN-LAST:event_chkLockBaseTexture2ActionPerformed
+
+  private void chkLockBumpMap1ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockBumpMap1ActionPerformed
+    txtBumpMap1.setEnabled( !chkLockBumpMap1.isSelected() );
+    btnBumpMap1.setEnabled( !chkLockBumpMap1.isSelected() );
+  }// GEN-LAST:event_chkLockBumpMap1ActionPerformed
+
+  private void chkLockBumpMap2ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockBumpMap2ActionPerformed
+    txtBumpMap2.setEnabled( !chkLockBumpMap2.isSelected() );
+    btnBumpMap2.setEnabled( !chkLockBumpMap2.isSelected() );
+  }// GEN-LAST:event_chkLockBumpMap2ActionPerformed
+
+  private void chkLockDetailTextureActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockDetailTextureActionPerformed
+    txtDetailTexture.setEnabled( !chkLockDetailTexture.isSelected() );
+    btnDetailTexture.setEnabled( !chkLockDetailTexture.isSelected() );
+  }// GEN-LAST:event_chkLockDetailTextureActionPerformed
+
+  private void chkLockDuDvMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockDuDvMapActionPerformed
+    txtDuDvMap.setEnabled( !chkLockDuDvMap.isSelected() );
+    btnDuDvMap.setEnabled( !chkLockDuDvMap.isSelected() );
+  }// GEN-LAST:event_chkLockDuDvMapActionPerformed
+
+  private void chkLockEnvMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockEnvMapActionPerformed
+    txtEnvMap.setEnabled( !chkLockEnvMap.isSelected() );
+    btnEnvMap.setEnabled( !chkLockEnvMap.isSelected() );
+  }// GEN-LAST:event_chkLockEnvMapActionPerformed
+
+  private void chkLockEnvMapContrastActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockEnvMapContrastActionPerformed
+    nudEnvMapContrast.setEnabled( !chkLockEnvMapContrast.isSelected() );
+  }// GEN-LAST:event_chkLockEnvMapContrastActionPerformed
+
+  private void chkLockEnvMapFrameActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockEnvMapFrameActionPerformed
+    nudEnvMapFrame.setEnabled( !chkLockEnvMapFrame.isSelected() );
+  }// GEN-LAST:event_chkLockEnvMapFrameActionPerformed
+
+  private void chkLockEnvMapMaskActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockEnvMapMaskActionPerformed
+    txtEnvMapMask.setEnabled( !chkLockEnvMapMask.isSelected() );
+    btnEnvMapMask.setEnabled( !chkLockEnvMapMask.isSelected() );
+  }// GEN-LAST:event_chkLockEnvMapMaskActionPerformed
+
+  private void chkLockEnvMapSaturationActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockEnvMapSaturationActionPerformed
+    nudEnvMapSaturation.setEnabled( !chkLockEnvMapSaturation.isSelected() );
+  }// GEN-LAST:event_chkLockEnvMapSaturationActionPerformed
+
+  private void chkLockFrameRateActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockFrameRateActionPerformed
+    nudFrameRate.setEnabled( animated & !chkLockFrameRate.isSelected() );
+  }// GEN-LAST:event_chkLockFrameRateActionPerformed
+
+  private void chkLockKeywordsActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockKeywordsActionPerformed
+    txtKeywords.setEnabled( !chkLockKeywords.isSelected() );
+  }// GEN-LAST:event_chkLockKeywordsActionPerformed
+
+  private void chkLockNormalMapActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockNormalMapActionPerformed
+    txtNormalMap.setEnabled( !chkLockNormalMap.isSelected() );
+    btnNormalMap.setEnabled( !chkLockNormalMap.isSelected() );
+  }// GEN-LAST:event_chkLockNormalMapActionPerformed
+
+  private void chkLockShaderActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockShaderActionPerformed
+    cmbShader.setEnabled( !chkLockShader.isSelected() );
+    txtShader.setEnabled( !chkLockShader.isSelected()
+                          & ( 0 == cmbShader.getSelectedIndex() ) );
+  }// GEN-LAST:event_chkLockShaderActionPerformed
+
+  private void chkLockSurface1ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockSurface1ActionPerformed
+    cmbSurface1.setEnabled( !chkLockSurface1.isSelected() );
+    txtSurface1.setEnabled( !chkLockSurface1.isSelected()
+                            & ( 1 == cmbSurface1.getSelectedIndex() ) );
+  }// GEN-LAST:event_chkLockSurface1ActionPerformed
+
+  private void chkLockSurface2ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockSurface2ActionPerformed
+    cmbSurface2.setEnabled( !chkLockSurface2.isSelected() );
+    txtSurface2.setEnabled( !chkLockSurface2.isSelected()
+                            & ( 1 == cmbSurface2.getSelectedIndex() ) );
+  }// GEN-LAST:event_chkLockSurface2ActionPerformed
+
+  private void chkLockToolTextureActionPerformed (
+    java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkLockToolTextureActionPerformed
+    txtToolTexture.setEnabled( !chkLockToolTexture.isSelected() );
+    btnToolTexture.setEnabled( !chkLockToolTexture.isSelected() );
+  }// GEN-LAST:event_chkLockToolTextureActionPerformed
+
+  private void chkOnlyMissingActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_chkOnlyMissingActionPerformed
+    showTextureFiles();
+  }// GEN-LAST:event_chkOnlyMissingActionPerformed
+
+  private void cmbShaderActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_cmbShaderActionPerformed
+    txtShader.setEnabled( 0 == cmbShader.getSelectedIndex() );
+  }// GEN-LAST:event_cmbShaderActionPerformed
+
+  private void cmbSurface1ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_cmbSurface1ActionPerformed
+    txtSurface1.setEnabled( 1 == cmbSurface1.getSelectedIndex() );
+  }// GEN-LAST:event_cmbSurface1ActionPerformed
+
+  private void cmbSurface2ActionPerformed ( java.awt.event.ActionEvent evt ) {// GEN-FIRST:event_cmbSurface2ActionPerformed
+    txtSurface2.setEnabled( 1 == cmbSurface2.getSelectedIndex() );
+  }// GEN-LAST:event_cmbSurface2ActionPerformed
 
   @Override
   public boolean dispatchKeyEvent ( KeyEvent ke ) {
@@ -175,40 +349,206 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       System.out.println( ke.toString() );
       switch ( ke.getKeyCode() ) {
         case KeyEvent.VK_F1:
-          GenerateVMT();
+          generateVMT();
           return true;
 
         case KeyEvent.VK_F2:
-          SetAllLocks( true );
+          setAllLocks( true );
           return true;
 
         case KeyEvent.VK_F3:
-          SetAllLocks( false );
+          setAllLocks( false );
           return true;
 
         case KeyEvent.VK_F4:
-          ToggleAllLocks();
+          toggleAllLocks();
           return true;
 
         case KeyEvent.VK_F5:
-          ShowTextureFiles();
+          showTextureFiles();
           return true;
 
         case KeyEvent.VK_F6:
-          ResetAllInput();
+          resetAllInput();
           return true;
       }
     }
     return false;
   }
 
+  private void generateVMT () {
+    if ( -1 == lstFiles.getSelectedIndex() ) {
+      return;
+    }
+
+
+
+    String value = lstFiles.getSelectedValue().toString();
+    String path = FilenameUtils.separatorsToSystem( FilenameUtils.concat(
+      workPath, FilenameUtils.getBaseName( value ) + ".VMT" ) );
+
+
+    File fileVMT = new File( path );
+    try ( PrintWriter out = new PrintWriter( fileVMT, "UTF-8" ) ) {
+      value = ( 0 == cmbShader.getSelectedIndex() ) ? txtShader.getText()
+              : cmbShader.getSelectedItem().toString();
+
+      // write the shader
+      out.printf( "\"%s\"%n{%n", value );
+
+      writeSpinner( out, nudAlpha, 1F, "$alpha", 4 );
+      writeSpinner( out, nudEnvMapContrast, 0F, "$envMapContrast", 3 );
+      writeSpinner( out, nudEnvMapContrast, 0F, "$envMapSaturation", 2 );
+      writeSpinner( out, nudEnvMapFrame, 0, "$envMapFrame", 3 );
+
+
+
+
+
+      // write surfaces
+      int index = cmbSurface1.getSelectedIndex();
+      if ( 0 != index ) {
+        value = ( 1 == index ) ? txtSurface1.getText() : cmbSurface1
+          .getSelectedItem().toString();
+
+        writeKeyValue( true, out, "$surfaceProp", value, 3 );
+      }
+
+      index = cmbSurface2.getSelectedIndex();
+      if ( 0 != index ) {
+        value = ( 1 == index ) ? txtSurface2.getText() : cmbSurface2
+          .getSelectedItem().toString();
+
+        writeKeyValue( true, out, "$surfaceProp2", value, 3 );
+      }
+
+
+      writeKeyValue( !( value = txtKeywords.getText() ).isEmpty(), out,
+                     "%keywords", value, 3 );
+
+      writeKeyValue( !( value = txtToolTexture.getText() ).isEmpty(), out,
+                     "%toolTexture", value, 3 );
+      writeKeyValue( !( value = txtBaseTexture1.getText() ).isEmpty(), out,
+                     "$baseTexture", value, 3 );
+      writeKeyValue( !( value = txtBaseTexture2.getText() ).isEmpty(), out,
+                     "$baseTexture2", value, 3 );
+      writeKeyValue( !( value = txtDetailTexture.getText() ).isEmpty(), out,
+                     "$detail", value, 4 );
+      writeKeyValue( !( value = txtBumpMap1.getText() ).isEmpty(), out,
+                     "$bumpMap", value, 3 );
+      writeKeyValue( !( value = txtBumpMap2.getText() ).isEmpty(), out,
+                     "$bumpMap2", value, 3 );
+      writeKeyValue( !( value = txtEnvMap.getText() ).isEmpty(), out,
+                     "$envMap", value, 3 );
+      writeKeyValue( !( value = txtEnvMapMask.getText() ).isEmpty(), out,
+                     "$envMapMask", value, 3 );
+      writeKeyValue( !( value = txtNormalMap.getText() ).isEmpty(), out,
+                     "$normalMap", value, 3 );
+      writeKeyValue( !( value = txtDuDvMap.getText() ).isEmpty(), out,
+                     "$DuDvMap", value, 3 );
+
+
+
+      value = "1";
+      writeKeyValue( chkFlagAdditive.isSelected(), out,
+                     "$additive", value, 3 );
+      writeKeyValue( chkFlagAlphaTest.isSelected(), out,
+                     "$alphaTest", value, 3 );
+      writeKeyValue( chkFlagIgnoreZ.isSelected(), out,
+                     "$ignoreZ", value, 3 );
+      writeKeyValue( chkFlagNoCull.isSelected(), out,
+                     "$noCull", value, 4 );
+      writeKeyValue( chkFlagNoDecal.isSelected(), out,
+                     "$noDecal", value, 3 );
+      writeKeyValue( chkFlagNoLOD.isSelected(), out,
+                     "$noLOD", value, 3 );
+      writeKeyValue( chkFlagPhong.isSelected(), out,
+                     "$phong", value, 4 );
+      writeKeyValue( chkFlagSelfIllum.isSelected(), out,
+                     "$selfIllum", value, 3 );
+      writeKeyValue( chkFlagTranslucent.isSelected(), out,
+                     "$translucent", value, 3 );
+      writeKeyValue( chkFlagVertexAlpha.isSelected(), out,
+                     "$vertexAlpha", value, 3 );
+      writeKeyValue( chkFlagVertexColor.isSelected(), out,
+                     "$vertexColor", value, 3 );
+
+
+
+      writeKeyValue( chkCompileClip.isSelected(), out,
+                     "%compileClip", value, 3 );
+      writeKeyValue( chkCompileDetail.isSelected(), out,
+                     "%compileDetail", value, 3 );
+      writeKeyValue( chkCompileFog.isSelected(), out,
+                     "%compileFog", value, 3 );
+      writeKeyValue( chkCompileHint.isSelected(), out,
+                     "%compileHint", value, 3 );
+      writeKeyValue( chkCompileLadder.isSelected(), out,
+                     "%compileLadder", value, 3 );
+      writeKeyValue( chkCompileNoDraw.isSelected(), out,
+                     "%compileNoDraw", value, 3 );
+      writeKeyValue( chkCompileNoLight.isSelected(), out,
+                     "%compileNoLight", value, 3 );
+      writeKeyValue( chkCompileNonSolid.isSelected(), out,
+                     "%compileNonSolid", value, 2 );
+      writeKeyValue( chkCompileNpcClip.isSelected(), out,
+                     "%compileNpcClip", value, 3 );
+      writeKeyValue( chkCompilePassBullets.isSelected(), out,
+                     "%compilePassBullets", value, 2 );
+      writeKeyValue( chkCompilePlayerClip.isSelected(), out,
+                     "%compilePlayerClip", value, 2 );
+      writeKeyValue( chkCompilePlayerControlClip.isSelected(), out,
+                     "%compilePlayerControlClip", value, 2 );
+      writeKeyValue( chkCompileSkip.isSelected(), out,
+                     "%compileSkip", value, 3 );
+      writeKeyValue( chkCompileSky.isSelected(), out,
+                     "%compileSky", value, 3 );
+      writeKeyValue( chkCompileTrigger.isSelected(), out,
+                     "%compileTrigger", value, 3 );
+
+
+
+      // animation code
+      if ( animated ) {
+        value = nudFrameRate.getValue().toString();
+        out.printf( "%n\t\"proxies\"%n" );
+        out.printf( "\t{%n" );
+        out.printf( "\t\t\"animatedTexture\"%n" );
+        out.printf( "\t\t{%n" );
+        out.printf( "\t\t\t\"animatedTextureVar\"\t\t\"$baseTexture\"%n" );
+        out.printf( "\t\t\t\"animatedTextureFrameNumVar\"\t\"$frame\"%n" );
+        out.printf( "\t\t\t\"animatedTextureFrameRate\" \t\"%s\"%n", value );
+        out.printf( "\t\t}%n" );
+        out.printf( "\t}%n" );
+      }
+
+      out.print( "}" );
+      out.flush();
+
+      try {
+        URL url = this.getClass().getClassLoader().getResource( "blip.wav" );
+        AudioInputStream audioIn = AudioSystem.getAudioInputStream( url );
+        clipBlip = AudioSystem.getClip();
+        clipBlip.open( audioIn );
+        clipBlip.start();
+      } catch ( LineUnavailableException | UnsupportedAudioFileException |
+                IOException ex ) {
+        logger.log( Level.SEVERE, null, ex );
+      }
+
+    } catch ( FileNotFoundException | UnsupportedEncodingException ex ) {
+      logger.log( Level.SEVERE, null, ex );
+    }
+
+  }
+
   /**
-   This method is called from within the constructor to
-   initialize the form.
-   WARNING: Do NOT modify this code. The content of this method is
-   always regenerated by the Form Editor.
+   This method is called from within the constructor to initialize the form.
+   WARNING: Do NOT modify this code. The content of this method is always
+   regenerated by the Form Editor.
    */
   @SuppressWarnings ( "unchecked" )
+  // <editor-fold defaultstate="collapsed"
   // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
   private void initComponents() {
 
@@ -220,16 +560,17 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     txtWorkFolder = new javax.swing.JTextField();
     jLabel2 = new javax.swing.JLabel();
     panFlags = new javax.swing.JPanel();
-    chkAdditive = new javax.swing.JCheckBox();
-    chkAlphaTest = new javax.swing.JCheckBox();
-    chkEnvMapContrast = new javax.swing.JCheckBox();
-    chkEnvMapSaturation = new javax.swing.JCheckBox();
-    chkNoCull = new javax.swing.JCheckBox();
-    chkNoDecal = new javax.swing.JCheckBox();
-    chkNoLOD = new javax.swing.JCheckBox();
-    chkTranslucent = new javax.swing.JCheckBox();
-    chkVertexAlpha = new javax.swing.JCheckBox();
-    chkVertexColor = new javax.swing.JCheckBox();
+    chkFlagAdditive = new javax.swing.JCheckBox();
+    chkFlagAlphaTest = new javax.swing.JCheckBox();
+    chkFlagNoCull = new javax.swing.JCheckBox();
+    chkFlagNoDecal = new javax.swing.JCheckBox();
+    chkFlagNoLOD = new javax.swing.JCheckBox();
+    chkFlagTranslucent = new javax.swing.JCheckBox();
+    chkFlagVertexAlpha = new javax.swing.JCheckBox();
+    chkFlagVertexColor = new javax.swing.JCheckBox();
+    chkFlagIgnoreZ = new javax.swing.JCheckBox();
+    chkFlagPhong = new javax.swing.JCheckBox();
+    chkFlagSelfIllum = new javax.swing.JCheckBox();
     panTexture = new javax.swing.JPanel();
     jLabel8 = new javax.swing.JLabel();
     jLabel9 = new javax.swing.JLabel();
@@ -287,12 +628,6 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     jLabel6 = new javax.swing.JLabel();
     txtKeywords = new javax.swing.JTextField();
     chkLockKeywords = new javax.swing.JCheckBox();
-    nudFrameRate = new javax.swing.JSpinner();
-    chkLockFrameRate = new javax.swing.JCheckBox();
-    jLabel7 = new javax.swing.JLabel();
-    chkLockAlpha = new javax.swing.JCheckBox();
-    jLabel19 = new javax.swing.JLabel();
-    nudAlpha = new javax.swing.JSpinner();
     panFiles = new javax.swing.JPanel();
     chkOnlyMissing = new javax.swing.JCheckBox();
     jScrollPane1 = new javax.swing.JScrollPane();
@@ -321,6 +656,22 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     chkCompileClip = new javax.swing.JCheckBox();
     chkCompileFog = new javax.swing.JCheckBox();
     chkCompilePlayerControlClip = new javax.swing.JCheckBox();
+    jPanel3 = new javax.swing.JPanel();
+    chkLockEnvMapContrast = new javax.swing.JCheckBox();
+    nudEnvMapContrast = new javax.swing.JSpinner();
+    jLabel24 = new javax.swing.JLabel();
+    chkLockFrameRate = new javax.swing.JCheckBox();
+    jLabel7 = new javax.swing.JLabel();
+    nudFrameRate = new javax.swing.JSpinner();
+    nudAlpha = new javax.swing.JSpinner();
+    jLabel19 = new javax.swing.JLabel();
+    chkLockAlpha = new javax.swing.JCheckBox();
+    chkLockEnvMapSaturation = new javax.swing.JCheckBox();
+    jLabel26 = new javax.swing.JLabel();
+    nudEnvMapSaturation = new javax.swing.JSpinner();
+    chkLockEnvMapFrame = new javax.swing.JCheckBox();
+    jLabel27 = new javax.swing.JLabel();
+    nudEnvMapFrame = new javax.swing.JSpinner();
 
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     setTitle("VMTGen");
@@ -330,10 +681,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     panFolders.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Settings"));
 
     jLabel1.setText("Root Folder");
+    jLabel1.setToolTipText("<html>This should point to your materials folder.<br />\nFor example, Steam\\SteamApps\\common\\Team Fortress 2\\tf\\materials</html>");
 
     txtRootFolder.setEditable(false);
     txtRootFolder.setBackground(java.awt.SystemColor.text);
-    txtRootFolder.setFocusable(false);
     txtRootFolder.setName(""); // NOI18N
     txtRootFolder.setPreferredSize(new java.awt.Dimension(59, 25));
 
@@ -353,11 +704,11 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     txtWorkFolder.setEditable(false);
     txtWorkFolder.setBackground(java.awt.SystemColor.text);
-    txtWorkFolder.setFocusable(false);
     txtWorkFolder.setName(""); // NOI18N
     txtWorkFolder.setPreferredSize(new java.awt.Dimension(59, 25));
 
     jLabel2.setText("Working Folder");
+    jLabel2.setToolTipText("<html>This should point to where your custom textures are.<br />\n(and where your material files will be)<br />\nFor example, Steam\\SteamApps\\common\\Team Fortress 2\\tf\\materials\\custom\\OuterSpace");
 
     javax.swing.GroupLayout panFoldersLayout = new javax.swing.GroupLayout(panFolders);
     panFolders.setLayout(panFoldersLayout);
@@ -398,27 +749,40 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     panFlags.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Flags"));
 
-    chkAdditive.setText("Additive");
+    chkFlagAdditive.setText("Additive");
+    chkFlagAdditive.setToolTipText("<html>Add the material's colour values to the existing image, instead of performing a multiplication.<br />\nThis means, among other things, that the material will always brighten the world.<br />\nThis is useful for effects like volumetric dust, light sprites, etc...</html>");
 
-    chkAlphaTest.setText("Alpha Test");
+    chkFlagAlphaTest.setText("Alpha Test");
+    chkFlagAlphaTest.setToolTipText("<html>Translucency can sometimes cause a material to flicker, or cause sorting issues with nearby surfaces.<br />\nIn both cases, consider using $alphatest instead of $translucent when this happens.<br />\nIt drastically lowers quality, but will usually resolve the issue and is much faster to draw.<br />\nIt will also cast flashlight shadows, unlike translucents.</html>");
 
-    chkEnvMapContrast.setText("Environment Map Contrast");
+    chkFlagNoCull.setText("No Cull");
+    chkFlagNoCull.setToolTipText("<html>Makes the material appear on the reverse side of the surface it is applied to.<br />\nGenerally only useful when used in conjunction with $translucent or $alpha.<br />\nNote: Has no effect on world brushes (so tie each one to func_detail).<br />\nBug: Cannot be used with $translucent on models. Use $alphatest instead.</html>");
 
-    chkEnvMapSaturation.setText("Environment Map Saturation");
+    chkFlagNoDecal.setText("No Decal");
+    chkFlagNoDecal.setToolTipText("N/A");
 
-    chkNoCull.setText("No Cull");
+    chkFlagNoLOD.setForeground(new java.awt.Color(10, 36, 106));
+    chkFlagNoLOD.setText("No LOD");
+    chkFlagNoLOD.setToolTipText("No Level of Detail");
 
-    chkNoDecal.setText("No Decal");
+    chkFlagTranslucent.setForeground(new java.awt.Color(10, 36, 106));
+    chkFlagTranslucent.setText("Translucent");
+    chkFlagTranslucent.setToolTipText("<html>Specifies that the material should be partially see-through.<br />\nThe alpha channel of $basetexture is used to decide translucency per-pixel.<br />\nAny object that has a $translucent material does not affect VIS, and can be seen through by NPCs from any angle.</html>");
 
-    chkNoLOD.setForeground(new java.awt.Color(10, 36, 106));
-    chkNoLOD.setText("No LOD");
+    chkFlagVertexAlpha.setText("Vertex Alpha");
+    chkFlagVertexAlpha.setToolTipText("<html>Makes the surface derive its alpha values from per-vertex data provided by the engine.<br />\nOnly particles and decals are known to modify their vertex data, but it should be possible to implement your own scenarios too.<br />\nVertex alpha cannot be compiled into a model and is currently unfunctional in Counter-Strike: Global Offensive; Using it will result in the material to turn completely black in-game.</html>");
 
-    chkTranslucent.setForeground(new java.awt.Color(10, 36, 106));
-    chkTranslucent.setText("Translucent");
+    chkFlagVertexColor.setText("Vertex Color");
+    chkFlagVertexColor.setToolTipText("<html>Makes the surface derive its color values from per-vertex data provided by the engine.<br />\nOnly particles and decals are known to modify their vertex data, but it should be possible to implement your own scenarios too.<br />\nVertex color cannot be compiled into a model and is currently unfunctional in Counter-Strike: Global Offensive; Using it will result in the material to turn completely black in-game.</html>");
 
-    chkVertexAlpha.setText("Vertex Alpha");
+    chkFlagIgnoreZ.setText("Ignore Z-Axis");
+    chkFlagIgnoreZ.setToolTipText("<html>Used for decals and sprays.<br />\nCannot be used on models to prevent cheating.</html>");
 
-    chkVertexColor.setText("Vertex Color");
+    chkFlagPhong.setText("Phong");
+    chkFlagPhong.setToolTipText("Diffuse reflections. It is only available with the VertexLitGeneric shader.");
+
+    chkFlagSelfIllum.setText("Self Illuminated");
+    chkFlagSelfIllum.setToolTipText("<html>Makes a material glow in the dark. Shaders commonly support this effect.<br />\nThe effect is masked by default by the alpha channel of $basetexture<br />\nWherever the mask is located, white areas are self-illuminated while black areas are not.<br />\nWarning: Cannot be used with $translucent or similar values on models. Use UnlitGeneric shader instead.</html>\n");
 
     javax.swing.GroupLayout panFlagsLayout = new javax.swing.GroupLayout(panFlags);
     panFlags.setLayout(panFlagsLayout);
@@ -427,49 +791,56 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       .addGroup(panFlagsLayout.createSequentialGroup()
         .addContainerGap()
         .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(chkEnvMapContrast)
-          .addComponent(chkEnvMapSaturation)
-          .addComponent(chkNoCull)
-          .addComponent(chkNoDecal)
-          .addComponent(chkNoLOD)
-          .addComponent(chkTranslucent)
-          .addComponent(chkVertexAlpha)
-          .addComponent(chkVertexColor)
-          .addComponent(chkAdditive)
-          .addComponent(chkAlphaTest))
+          .addComponent(chkFlagIgnoreZ)
+          .addComponent(chkFlagNoCull)
+          .addComponent(chkFlagNoDecal)
+          .addComponent(chkFlagAlphaTest)
+          .addComponent(chkFlagNoLOD)
+          .addComponent(chkFlagAdditive))
+        .addGap(33, 33, 33)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(chkFlagPhong)
+          .addComponent(chkFlagVertexColor)
+          .addComponent(chkFlagTranslucent)
+          .addComponent(chkFlagVertexAlpha)
+          .addComponent(chkFlagSelfIllum))
         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
     panFlagsLayout.setVerticalGroup(
       panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(panFlagsLayout.createSequentialGroup()
         .addContainerGap()
-        .addComponent(chkAdditive)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkFlagAdditive)
+          .addComponent(chkFlagPhong))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkAlphaTest)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 1, Short.MAX_VALUE)
-        .addComponent(chkEnvMapContrast)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkFlagAlphaTest)
+          .addComponent(chkFlagSelfIllum))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkEnvMapSaturation)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkFlagIgnoreZ)
+          .addComponent(chkFlagTranslucent))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkNoCull)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkFlagNoCull)
+          .addComponent(chkFlagVertexAlpha))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkNoDecal)
+        .addGroup(panFlagsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+          .addComponent(chkFlagNoDecal)
+          .addComponent(chkFlagVertexColor))
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkNoLOD)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkTranslucent)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkVertexAlpha)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(chkVertexColor)
+        .addComponent(chkFlagNoLOD)
         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
 
     panTexture.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Textures"));
 
     jLabel8.setText("Base Texture 1");
+    jLabel8.setToolTipText("Defines an albedo texture, in most cases, this is REQUIRED.");
 
     jLabel9.setText("Base Texture 2");
+    jLabel9.setToolTipText("Defines a secondary albedo texture, commonly used for dual surfaces such as grass/dirt blends.");
 
     chkLockBaseTexture2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
     chkLockBaseTexture2.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
@@ -505,6 +876,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel10.setText("Detail Texture");
+    jLabel10.setToolTipText("<html>Specifies a texture with which will add high-resolution detail when the material is viewed up close,<br />\nby darkening or lightening the albedo texture appropriately.</html>");
 
     txtDetailTexture.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -516,6 +888,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel11.setText("Tool Texture");
+    jLabel11.setToolTipText("<html>Used to blend texture previews in Hammer Editor.<br />\nWithout a tooltexture, Hammer will only show your first $basetexture,<br />\nmaking it impossible to see the blend without compiling.");
 
     txtToolTexture.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -553,8 +926,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel12.setText("Bump Map 1");
+    jLabel12.setToolTipText("<html>Specifies a texture that will provide three-dimensional lighting information for a material.<br />\nThe texture is a bump map, but the process it is used for is called normal mapping.<br />\nThe two terms are often used interchangeably, however.<br />\nWarning: $bumpmap will disable prop_static's per-vertex lighting.<br />\nNot enough data is stored in the vertices for normal mapping, so the engine has no choice but to fall back.<br />\nNote: In the Water shader, $bumpmap is for a DX8 du/dv map. Use $normalmap instead.</html>");
 
     jLabel13.setText("Bump Map 2");
+    jLabel13.setToolTipText("<html>Specifies a texture that will provide three-dimensional lighting information for a material.<br />\nThe texture is a bump map, but the process it is used for is called normal mapping.<br />\nThe two terms are often used interchangeably, however.<br />\nWarning: $bumpmap will disable prop_static's per-vertex lighting.<br />\nNot enough data is stored in the vertices for normal mapping, so the engine has no choice but to fall back.<br />\nNote: In the Water shader, $bumpmap is for a DX8 du/dv map. Use $normalmap instead.</html>");
 
     txtBumpMap2.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -574,6 +949,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel14.setText("Environment Map");
+    jLabel14.setToolTipText("<html>Creates specular reflections, which are seen on smooth surfaces.<br />\nIt does this by defining an \"environment map\" (specifically a cubemap) to draw as a reflection;<br />\nnormally that of the nearest env_cubemap entity. The reflection is not dynamic.<br />\nThe other form of reflection supported by Source is the diffuse phong type.</html>");
 
     txtEnvMap.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -593,6 +969,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel15.setText("Environment Map Mask");
+    jLabel15.setToolTipText("<html>Defines a specular mask which affects how strongly each pixel of a material reflects light from the $envmap.<br />\nThe mask should be a greyscale image in which entirely reflective areas are white and entirely matte areas are black.<br />\nFor diffuse type specularity which does not rely on $envmap, see $phong.<br />\nWarning: $envmapmask will not work in model materials using $bumpmap.</html>");
 
     txtEnvMapMask.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -612,6 +989,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel16.setText("Normal Map");
+    jLabel16.setToolTipText("Normal Maps are used to simulate three-dimensional details on a two-dimensional surface by manipulating its lighting.");
 
     txtNormalMap.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -631,6 +1009,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel17.setText("DuDv Map");
+    jLabel17.setToolTipText("<html>Note: $dudvmap is now defunct and is replaced by the <b>Refract</b> shader.<br />\nThough, the Water shader still uses a du/dv map for $bumpmap.<br />\ndu/dv maps are used for DirectX 8 refractions.</html>");
 
     txtDuDvMap.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -830,6 +1209,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     txtShader.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel3.setText("Shader");
+    jLabel3.setToolTipText("Determines how an object or texture should be drawn");
 
     chkLockShader.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
     chkLockShader.setRequestFocusEnabled(false);
@@ -841,6 +1221,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     });
 
     jLabel4.setText("Surface 1");
+    jLabel4.setToolTipText("Defines the physical properties of an object including friction and density, collision/footstep sounds, the effect of bullet impacts and, if the object is destructible, health and gib type.");
 
     chkLockSurface2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
     chkLockSurface2.setRequestFocusEnabled(false);
@@ -863,6 +1244,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     txtSurface1.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel5.setText("Surface 2");
+    jLabel5.setToolTipText("Defines the physical properties of an object including friction and density, collision/footstep sounds, the effect of bullet impacts and, if the object is destructible, health and gib type.");
 
     cmbSurface2.setPreferredSize(new java.awt.Dimension(100, 22));
     cmbSurface2.addActionListener(new java.awt.event.ActionListener() {
@@ -876,6 +1258,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     txtSurface2.setPreferredSize(new java.awt.Dimension(100, 20));
 
     jLabel6.setText("Keywords");
+    jLabel6.setToolTipText("<html>Used to set a keyword filter that can be filtered in hammer for easier texture finding.<br />\neach keyword should be separated by a comma.<br />\nVMTGen automatically determines keywords based on the texture's filename, by converting hyphens and underscores to commas.</html>");
 
     txtKeywords.setDisabledTextColor(new java.awt.Color(255, 0, 0));
 
@@ -887,29 +1270,6 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       }
     });
 
-    nudFrameRate.setModel(new javax.swing.SpinnerNumberModel(0, 0, 999999, 1));
-    nudFrameRate.setEnabled(false);
-    nudFrameRate.setPreferredSize(new java.awt.Dimension(80, 18));
-
-    chkLockFrameRate.setEnabled(false);
-    chkLockFrameRate.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
-    chkLockFrameRate.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
-    chkLockFrameRate.addActionListener(new java.awt.event.ActionListener() {
-      public void actionPerformed(java.awt.event.ActionEvent evt) {
-        chkLockFrameRateActionPerformed(evt);
-      }
-    });
-
-    jLabel7.setText("Frame Rate");
-
-    chkLockAlpha.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
-    chkLockAlpha.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
-
-    jLabel19.setText("Alpha");
-
-    nudAlpha.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.01f)));
-    nudAlpha.setPreferredSize(new java.awt.Dimension(80, 18));
-
     javax.swing.GroupLayout panOptionsLayout = new javax.swing.GroupLayout(panOptions);
     panOptions.setLayout(panOptionsLayout);
     panOptionsLayout.setHorizontalGroup(
@@ -917,52 +1277,35 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
       .addGroup(panOptionsLayout.createSequentialGroup()
         .addContainerGap()
         .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(chkLockShader)
+          .addComponent(chkLockSurface1)
+          .addComponent(chkLockSurface2)
+          .addComponent(chkLockKeywords))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(panOptionsLayout.createSequentialGroup()
+            .addComponent(jLabel6)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+            .addComponent(txtKeywords))
           .addGroup(panOptionsLayout.createSequentialGroup()
             .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-              .addComponent(chkLockShader)
-              .addComponent(chkLockSurface1)
-              .addComponent(chkLockSurface2)
-              .addComponent(chkLockKeywords))
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
               .addGroup(panOptionsLayout.createSequentialGroup()
-                .addComponent(jLabel6)
+                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                  .addComponent(jLabel4)
+                  .addComponent(jLabel3))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                  .addGroup(panOptionsLayout.createSequentialGroup()
-                    .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE))
-                  .addComponent(txtKeywords)))
+                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                  .addComponent(cmbShader, 0, 151, Short.MAX_VALUE)
+                  .addComponent(cmbSurface1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
               .addGroup(panOptionsLayout.createSequentialGroup()
-                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                  .addGroup(panOptionsLayout.createSequentialGroup()
-                    .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                      .addComponent(jLabel4)
-                      .addComponent(jLabel3))
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                      .addComponent(cmbShader, 0, 151, Short.MAX_VALUE)
-                      .addComponent(cmbSurface1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                  .addGroup(panOptionsLayout.createSequentialGroup()
-                    .addComponent(jLabel5)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addComponent(cmbSurface2, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                  .addComponent(txtSurface2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                  .addComponent(txtSurface1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                  .addGroup(panOptionsLayout.createSequentialGroup()
-                    .addComponent(chkLockFrameRate)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addComponent(jLabel7)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE))
-                  .addComponent(txtShader, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))
-          .addGroup(panOptionsLayout.createSequentialGroup()
-            .addComponent(chkLockAlpha)
+                .addComponent(jLabel5)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(cmbSurface2, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)))
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jLabel19)))
+            .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(txtSurface2, javax.swing.GroupLayout.DEFAULT_SIZE, 177, Short.MAX_VALUE)
+              .addComponent(txtSurface1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+              .addComponent(txtShader, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
         .addContainerGap())
     );
     panOptionsLayout.setVerticalGroup(
@@ -995,21 +1338,13 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
             .addComponent(txtKeywords, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addComponent(jLabel6))
           .addComponent(chkLockKeywords))
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-          .addComponent(jLabel19)
-          .addComponent(chkLockAlpha)
-          .addGroup(panOptionsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-            .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addComponent(jLabel7))
-          .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-          .addComponent(chkLockFrameRate))
-        .addContainerGap(22, Short.MAX_VALUE))
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
 
     panFiles.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Texture Files"));
 
-    chkOnlyMissing.setText("Only show Texture files without Material files");
+    chkOnlyMissing.setText("Only Missing");
+    chkOnlyMissing.setToolTipText("If checked, only VTF texures that do not have their associated VMT material files present will be shown in the list below.");
     chkOnlyMissing.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(java.awt.event.ActionEvent evt) {
         chkOnlyMissingActionPerformed(evt);
@@ -1018,6 +1353,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
 
     lstFiles.setModel(new DefaultListModel());
     lstFiles.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+    lstFiles.setPreferredSize(null);
     lstFiles.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
       public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
         lstFilesValueChanged(evt);
@@ -1029,11 +1365,11 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     panFiles.setLayout(panFilesLayout);
     panFilesLayout.setHorizontalGroup(
       panFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-      .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panFilesLayout.createSequentialGroup()
-        .addGap(13, 13, 13)
-        .addGroup(panFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-          .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 289, Short.MAX_VALUE)
-          .addComponent(chkOnlyMissing, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+      .addGroup(panFilesLayout.createSequentialGroup()
+        .addContainerGap()
+        .addGroup(panFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(chkOnlyMissing)
+          .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         .addContainerGap())
     );
     panFilesLayout.setVerticalGroup(
@@ -1042,7 +1378,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         .addContainerGap()
         .addComponent(chkOnlyMissing)
         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 84, Short.MAX_VALUE)
         .addContainerGap())
     );
 
@@ -1098,43 +1434,59 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Compile Flags"));
 
     chkCompileTrigger.setText("Trigger");
+    chkCompileTrigger.setToolTipText("Compiles the texture as a TRIGGER texture, meaning your texture will behave the same as the tools/toolstrigger.");
 
     chkCompileSky.setText("Sky");
+    chkCompileSky.setToolTipText("Compiles the texture as a SKY texture, meaning your texture will behave as a SKYBOX.");
 
     chkCompileSkip.setText("Skip");
+    chkCompileSkip.setToolTipText("Compiles the texture as a SKIP texture, meaning your texture will behave the same as the tools/toolsskip.");
 
     chkCompilePlayerClip.setText("Player Clip");
+    chkCompilePlayerClip.setToolTipText("Compiles the texture as a PLAYER CLIP texture, meaning your texture will behave the same as the tools/toolsplayerclip.");
 
     chkCompileNoDraw.setText("No Draw");
+    chkCompileNoDraw.setToolTipText("Compiles the texture as a NO DRAW texture, meaning your texture will behave the same as the tools/toolsnodraw.");
 
     chkCompilePassBullets.setText("Pass Bullets");
+    chkCompilePassBullets.setToolTipText("Compiles the texture as non-solid to bullets, meaning your texture can be shot through, which is useful for foliage and fences.");
 
     chkCompileOrigin.setText("Origin");
+    chkCompileOrigin.setToolTipText("N/A");
 
     chkCompileNoLight.setText("No Light");
+    chkCompileNoLight.setToolTipText("Description not available, but this compile flag was found on tools/areaportal.");
 
     chkCompileNpcClip.setText("NPC Clip");
+    chkCompileNpcClip.setToolTipText("Compiles the texture as a NPC CLIP texture, meaning your texture will behave the same as the tools/toolsnpcclip.");
 
     chkCompileLadder.setText("Ladder");
+    chkCompileLadder.setToolTipText("Compiles the texture as a LADDER texture, meaning your texture will behave the same as the tools/toolsladder.");
 
     chkCompileHint.setText("Hint");
+    chkCompileHint.setToolTipText("Compiles the texture as a HINT texture, meaning your texture will behave the same as the tools/toolshint.");
 
     chkCompileNonSolid.setText("Non-Solid");
+    chkCompileNonSolid.setToolTipText("Compiles the texture as a NON-SOLID texture, brushes with this texture will be compiled as Non-Solid, which is useful for lighting and foliage effects.");
 
     chkCompileDetail.setText("Detail");
+    chkCompileDetail.setToolTipText("N/A");
 
     chkCompileClip.setText("Clip");
+    chkCompileClip.setToolTipText("Compiles the texture as a CLIP texture, meaning your texture will behave the same as the tools/toolsclip.");
 
     chkCompileFog.setText("Fog");
+    chkCompileFog.setToolTipText("Compiles the texture as a FOG texture, meaning your texture will behave the same as the tools/toolsfog.");
 
     chkCompilePlayerControlClip.setText("Player Control Clip");
+    chkCompilePlayerControlClip.setToolTipText("Compiles the texture as a PLAYER CONTROL CLIP texture, meaning your texture will behave the same as the tools/toolsplayercontrolclip.");
 
     javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
     jPanel2.setLayout(jPanel2Layout);
     jPanel2Layout.setHorizontalGroup(
       jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(jPanel2Layout.createSequentialGroup()
-        .addContainerGap()
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
           .addGroup(jPanel2Layout.createSequentialGroup()
             .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1145,18 +1497,17 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
               .addComponent(chkCompileHint)
               .addComponent(chkCompileNoDraw)
               .addComponent(chkCompileLadder))
-            .addGap(18, 18, 18)
+            .addGap(51, 51, 51)
             .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(chkCompileOrigin)
+              .addComponent(chkCompileNpcClip)
+              .addComponent(chkCompilePassBullets)
               .addComponent(chkCompilePlayerClip)
+              .addComponent(chkCompilePlayerControlClip)
               .addComponent(chkCompileSkip)
               .addComponent(chkCompileSky)
-              .addComponent(chkCompileTrigger)
-              .addComponent(chkCompileOrigin)
-              .addComponent(chkCompilePassBullets)
-              .addComponent(chkCompileNpcClip)
-              .addComponent(chkCompilePlayerControlClip)))
-          .addComponent(chkCompileFog))
-        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+              .addComponent(chkCompileTrigger)))
+          .addComponent(chkCompileFog)))
     );
     jPanel2Layout.setVerticalGroup(
       jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1196,195 +1547,323 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
 
+    jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)), "Misc"));
+
+    chkLockEnvMapContrast.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
+    chkLockEnvMapContrast.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
+    chkLockEnvMapContrast.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        chkLockEnvMapContrastActionPerformed(evt);
+      }
+    });
+
+    nudEnvMapContrast.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(0.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.01f)));
+    nudEnvMapContrast.setToolTipText("");
+
+    jLabel24.setText("Environment Map Contrast");
+    jLabel24.setToolTipText("<html>Controls the contrast of the reflection.<br />\n0 is natural contrast, while 1 is the full squaring of the color (i.e. color*color).<br />\nTip: Use higher contrasts to diminish relatively darker areas and increase \"hot spots\". <br />\nNote: Will not work when Phong is enabled.</html>");
+
+    chkLockFrameRate.setEnabled(false);
+    chkLockFrameRate.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
+    chkLockFrameRate.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
+    chkLockFrameRate.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        chkLockFrameRateActionPerformed(evt);
+      }
+    });
+
+    jLabel7.setText("Frame Rate");
+    jLabel7.setToolTipText("How many frames per second to render an Animated Texture");
+
+    nudFrameRate.setModel(new javax.swing.SpinnerNumberModel(0, 0, 999999, 1));
+    nudFrameRate.setEnabled(false);
+    nudFrameRate.setPreferredSize(new java.awt.Dimension(80, 18));
+
+    nudAlpha.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.01f)));
+    nudAlpha.setPreferredSize(new java.awt.Dimension(80, 18));
+
+    jLabel19.setText("Alpha");
+    jLabel19.setToolTipText("<html>Scales the opacity of an entire material by the given value.<br />\n1 is entirely opaque, 0 is invisible.<br />\nIf any material on a brush has alpha, the brush will stop affecting VIS and become entirely transparent to NPCs from every angle.<br />\nThis may be used with the <b>translucent</b> flag.</html>");
+
+    chkLockAlpha.setIcon(new javax.swing.ImageIcon(getClass().getResource("/unlocked_16x16.png"))); // NOI18N
+    chkLockAlpha.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/locked_16x16.png"))); // NOI18N
+    chkLockAlpha.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        chkLockAlphaActionPerformed(evt);
+      }
+    });
+
+    chkLockEnvMapSaturation.setIcon(new javax.swing.ImageIcon("C:\\Users\\Xyphos\\Documents\\NetBeansProjects\\VMTGen\\src\\main\\resources\\unlocked_16x16.png")); // NOI18N
+    chkLockEnvMapSaturation.setSelectedIcon(new javax.swing.ImageIcon("C:\\Users\\Xyphos\\Documents\\NetBeansProjects\\VMTGen\\src\\main\\resources\\locked_16x16.png")); // NOI18N
+    chkLockEnvMapSaturation.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        chkLockEnvMapSaturationActionPerformed(evt);
+      }
+    });
+
+    jLabel26.setText("Environment Map Saturation");
+    jLabel26.setToolTipText("<html>Controls the colour saturation of the reflection.<br />\n0 is greyscale, while 1 is natural saturation.<br />\nNote: Will not work when Phong is enabled.</html>");
+
+    nudEnvMapSaturation.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(0.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.01f)));
+    nudEnvMapSaturation.setToolTipText("");
+
+    chkLockEnvMapFrame.setEnabled(false);
+    chkLockEnvMapFrame.setIcon(new javax.swing.ImageIcon("C:\\Users\\Xyphos\\Documents\\NetBeansProjects\\VMTGen\\src\\main\\resources\\unlocked_16x16.png")); // NOI18N
+    chkLockEnvMapFrame.setSelectedIcon(new javax.swing.ImageIcon("C:\\Users\\Xyphos\\Documents\\NetBeansProjects\\VMTGen\\src\\main\\resources\\locked_16x16.png")); // NOI18N
+    chkLockEnvMapFrame.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        chkLockEnvMapFrameActionPerformed(evt);
+      }
+    });
+
+    jLabel27.setText("Environment Map Frame");
+    jLabel27.setToolTipText("The frame to start an animated cubemap on.");
+
+    nudEnvMapFrame.setModel(new javax.swing.SpinnerNumberModel(0, 0, 0, 1));
+    nudEnvMapFrame.setEnabled(false);
+
+    javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+    jPanel3.setLayout(jPanel3Layout);
+    jPanel3Layout.setHorizontalGroup(
+      jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+      .addGroup(jPanel3Layout.createSequentialGroup()
+        .addContainerGap()
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(chkLockAlpha)
+          .addComponent(chkLockEnvMapContrast)
+          .addComponent(chkLockEnvMapSaturation)
+          .addComponent(chkLockEnvMapFrame)
+          .addComponent(chkLockFrameRate))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel3Layout.createSequentialGroup()
+            .addComponent(jLabel19)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addGroup(jPanel3Layout.createSequentialGroup()
+            .addComponent(jLabel7)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+            .addComponent(jLabel27)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(nudEnvMapFrame, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+            .addComponent(jLabel26)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 30, Short.MAX_VALUE)
+            .addComponent(nudEnvMapContrast, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+            .addComponent(jLabel24)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(nudEnvMapSaturation, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))))
+    );
+    jPanel3Layout.setVerticalGroup(
+      jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+      .addGroup(jPanel3Layout.createSequentialGroup()
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+            .addComponent(nudAlpha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(jLabel19))
+          .addComponent(chkLockAlpha))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+            .addComponent(nudEnvMapSaturation, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(jLabel24))
+          .addComponent(chkLockEnvMapContrast))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+            .addComponent(nudEnvMapContrast, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(jLabel26))
+          .addComponent(chkLockEnvMapSaturation))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+            .addComponent(nudEnvMapFrame, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(jLabel27))
+          .addComponent(chkLockEnvMapFrame))
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+          .addComponent(chkLockFrameRate)
+          .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+            .addComponent(jLabel7)
+            .addComponent(nudFrameRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+    );
+
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
     getContentPane().setLayout(layout);
     layout.setHorizontalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-      .addComponent(panFolders, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
       .addGroup(layout.createSequentialGroup()
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-          .addComponent(panTexture, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-          .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+        .addContainerGap()
+        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+          .addComponent(panFolders, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+          .addComponent(panTexture, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+          .addGroup(layout.createSequentialGroup()
             .addComponent(panFiles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
             .addComponent(panOptions, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
           .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+          .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
           .addComponent(panFlags, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-          .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+          .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
     layout.setVerticalGroup(
       layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
       .addGroup(layout.createSequentialGroup()
-        .addComponent(panFolders, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+        .addContainerGap()
         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
           .addGroup(layout.createSequentialGroup()
-            .addComponent(panFlags, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(panFolders, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-          .addGroup(layout.createSequentialGroup()
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-              .addComponent(panOptions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-              .addComponent(panFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+              .addComponent(panFiles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+              .addComponent(panOptions, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
             .addComponent(panTexture, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+          .addGroup(layout.createSequentialGroup()
+            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-        .addGap(0, 0, 0))
+            .addComponent(panFlags, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+            .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+        .addContainerGap())
     );
 
     pack();
   }// </editor-fold>//GEN-END:initComponents
 
-  private void WriteText ( PrintWriter out,
-                           boolean condition,
-                           int padding,
-                           String textureName,
-                           String textureValue ) {
+  private void lafSpinner ( JSpinner s ) {
+    ( ( JSpinner.NumberEditor ) s.getEditor() ).getTextField()
+      .setDisabledTextColor( Color.RED );
+  }
 
-    if ( condition ) {
-      out.printf( "\t\"%s\"\t\t", textureName );
-      for ( int i = 0; i < padding; i++ ) {
-        out.print( "\t" );
+  private void lstFilesValueChanged ( javax.swing.event.ListSelectionEvent evt ) {// GEN-FIRST:event_lstFilesValueChanged
+    if ( !evt.getValueIsAdjusting() && ( -1 != lstFiles.getSelectedIndex() ) ) {
+      String file = lstFiles.getSelectedValue().toString();
+
+      // set keywords based on file name
+      setKeywords( FilenameUtils.getBaseName( file ).replace( "_", "," )
+        .replace( "-", "," ) );
+
+      String path = FilenameUtils.separatorsToUnix(
+        FilenameUtils.concat( basePath,
+                              FilenameUtils.getBaseName( file ) ) )
+        .replaceFirst( "/",
+                       "" );
+
+      setBaseTexture1( path );
+
+      // read the vtf header
+      file = FilenameUtils.concat( workPath, file );
+      File fileVTF = new File( file );
+
+      try ( LittleEndianDataInputStream in = new LittleEndianDataInputStream(
+        new FileInputStream( fileVTF ) ) ) {
+
+        int sig = in.readInt();
+        if ( SIGNATURE_VTF != sig ) {
+          throw new IOException( "Not a VTF file" );
+        }
+
+        if ( 0x10 != in.skipBytes( 0x10 ) ) {
+          throw new IOException( "skip failure" );
+        }
+
+        int flags = in.readInt();
+        frameCount = in.readShort();
+        in.close(); // don't need any more information
+
+        chkFlagNoLOD.setSelected( 0 != ( 0x200 & flags ) );
+        chkFlagTranslucent.setSelected( 0 != ( 0x3000 & flags ) );
+
+        if ( animated = ( 1 < frameCount ) ) {
+          setFrameRate( frameCount );
+          ( ( SpinnerNumberModel ) nudEnvMapFrame.getModel() )
+            .setMaximum( frameCount );
+        }
+
+        nudFrameRate.setEnabled( animated
+                                 & !chkLockFrameRate.isSelected() );
+        nudEnvMapFrame.setEnabled( animated
+                                   & !chkLockEnvMapFrame.isSelected() );
+
+        chkLockFrameRate.setEnabled( animated );
+        chkLockEnvMapFrame.setEnabled( animated );
+
+      } catch ( FileNotFoundException ex ) {
+        logger.log( Level.SEVERE, null, ex );
+      } catch ( IOException ex ) {
+        logger.log( Level.SEVERE, null, ex );
       }
-      out.printf( "\"%s\"\r\n", textureValue );
     }
-  }
+  }// GEN-LAST:event_lstFilesValueChanged
 
-  private void WriteFlag ( PrintWriter out, boolean condition, String flagName ) {
-    if ( condition ) {
-      out.printf( "\t\"%s\"\t\t1\r\n", flagName );
-    }
-  }
-
-  private void GenerateVMT () {
-    if ( -1 == lstFiles.getSelectedIndex() ) {
-      return;
-    }
-
-    String file = lstFiles.getSelectedValue().toString();
-    String path = FilenameUtils.separatorsToSystem(
-      FilenameUtils.concat( workPath,
-                            FilenameUtils.getBaseName( file ) + ".VMT" ) );
-
+  public static void main ( String args[] ) {
     try {
-      File fileVMT = new File( path );
-      PrintWriter out = new PrintWriter( fileVMT );
+      javax.swing.UIManager.setLookAndFeel( javax.swing.UIManager
+        .getCrossPlatformLookAndFeelClassName() );
 
-      file = ( 0 == cmbShader.getSelectedIndex() )
-             ? txtShader.getText()
-             : cmbShader.getSelectedItem().toString();
-
-      out.printf( "\"%s\"\r\n", file );
-      out.println( "{" );
-
-      WriteText( out, !( file = txtKeywords.getText() ).isEmpty(), 0, "%keywords", file );
-      WriteText( out, !( file = txtToolTexture.getText() ).isEmpty(), 0, "%toolTexture", file );
-
-      int index = cmbSurface1.getSelectedIndex();
-      if ( 0 != index ) {
-        file = ( 1 == index )
-               ? txtSurface1.getText()
-               : cmbSurface1.getSelectedItem().toString();
-
-        out.printf( "\t\"$surfaceProp\"\t\t\"%s\"\r\n", file );
-      }
-
-      index = cmbSurface2.getSelectedIndex();
-      if ( 0 != index ) {
-        file = ( 1 == index )
-               ? txtSurface2.getText()
-               : cmbSurface2.getSelectedItem().toString();
-
-        out.printf( "\t\"$surfaceProp2\"\t\t\"%s\"\r\n", file );
-      }
-
-      if ( !( file = nudAlpha.getValue().toString() ).equals( "1.0" ) ) {
-        out.printf( "\t\"$alpha\"\t\t\t\"%s\"\r\n", file );
-      }
-
-      WriteText( out, !( file = txtBaseTexture1.getText() ).isEmpty(), 0, "$baseTexture", file );
-      WriteText( out, !( file = txtBaseTexture2.getText() ).isEmpty(), 0, "$baseTexture2", file );
-      WriteText( out, !( file = txtDetailTexture.getText() ).isEmpty(), 1, "$detail", file );
-      WriteText( out, !( file = txtBumpMap1.getText() ).isEmpty(), 0, "$bumpMap", file );
-      WriteText( out, !( file = txtBumpMap2.getText() ).isEmpty(), 0, "$bumpMap2", file );
-      WriteText( out, !( file = txtEnvMap.getText() ).isEmpty(), 0, "$envMap", file );
-      WriteText( out, !( file = txtEnvMapMask.getText() ).isEmpty(), 0, "$envMapMask", file );
-      WriteText( out, !( file = txtNormalMap.getText() ).isEmpty(), 0, "$normalMap", file );
-      WriteText( out, !( file = txtDuDvMap.getText() ).isEmpty(), 0, "$DuDvMap", file );
-
-      WriteFlag( out, chkAdditive.isSelected(), "$additive" );
-      WriteFlag( out, chkAlphaTest.isSelected(), "$alphaTest" );
-      WriteFlag( out, chkEnvMapContrast.isSelected(), "$envMapContrast" );
-      WriteFlag( out, chkEnvMapSaturation.isSelected(), "$envMapSaturation" );
-      WriteFlag( out, chkNoCull.isSelected(), "$noCull" );
-      WriteFlag( out, chkNoLOD.isSelected(), "$noLOD" );
-      WriteFlag( out, chkTranslucent.isSelected(), "$translucent" );
-      WriteFlag( out, chkVertexAlpha.isSelected(), "$vertexAlpha" );
-      WriteFlag( out, chkVertexColor.isSelected(), "$vertexColor" );
-
-      WriteFlag( out, chkCompileClip.isSelected(), "%compileClip" );
-      WriteFlag( out, chkCompileDetail.isSelected(), "%compileDetail" );
-      WriteFlag( out, chkCompileHint.isSelected(), "%compileHint" );
-      WriteFlag( out, chkCompileLadder.isSelected(), "%compileLadder" );
-      WriteFlag( out, chkCompileNoDraw.isSelected(), "%compileNoDraw" );
-      WriteFlag( out, chkCompileNonSolid.isSelected(), "%compileNonSolid" );
-      WriteFlag( out, chkCompileNpcClip.isSelected(), "%compileNpcClip" );
-      WriteFlag( out, chkCompilePassBullets.isSelected(), "%compilePassBullets" );
-      WriteFlag( out, chkCompilePlayerClip.isSelected(), "%compilePlayerClip" );
-      WriteFlag( out, chkCompilePlayerControlClip.isSelected(), "%compilePlayerControlClip" );
-      WriteFlag( out, chkCompileSkip.isSelected(), "%compileSkip" );
-      WriteFlag( out, chkCompileSky.isSelected(), "%compileSky" );
-      WriteFlag( out, chkCompileTrigger.isSelected(), "%compileTrigger" );
-
-      if ( animated ) {
-        file = nudFrameRate.getValue().toString();
-        out.print( "\r\n\t\"proxies\"\r\n" );
-        out.print( "\t{\r\n" );
-        out.print( "\t\t\"animatedTexture\"\r\n" );
-        out.print( "\t\t{\r\n" );
-        out.print( "\t\t\t\"animatedTextureVar\"\t\t\"$baseTexture\"\r\n" );
-        out.print( "\t\t\t\"animatedTextureFrameNumVar\"\t\"$frame\"\r\n" );
-        out.printf( "\t\t\t\"animatedTextureFrameRate\"\t\t%s\r\n", file );
-        out.print( "\t\t}\r\n" );
-        out.print( "\t}\r\n" );
-      }
-
-      out.print( "}" );
-      out.flush();
-      out.close();
-    } catch ( FileNotFoundException ex ) {
+    } catch ( ClassNotFoundException | InstantiationException |
+              IllegalAccessException | UnsupportedLookAndFeelException ex ) {
       logger.log( Level.SEVERE, null, ex );
     }
+
+    /*
+     Create and display the form
+     */ java.awt.EventQueue.invokeLater( new Runnable() {
+      @Override
+      public void run () {
+        GUI gui = new GUI();
+        gui.pack();
+
+        // Global keyboard hook
+        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+          .addKeyEventDispatcher( gui );
+
+        gui.setVisible( true );
+      }
+    } );
   }
 
-  private void ResetAllInput () {
-    SetShaderIndex( ShaderDefault );
-    SetSurface1Index( SurfaceDefault );
-    SetSurface2Index( 0 );
-    SetKeywords( EMPTY_STRING );
-    SetFrameRate( 0 );
-    SetBaseTexture1( EMPTY_STRING );
-    SetBaseTexture2( EMPTY_STRING );
-    SetDetailTexture( EMPTY_STRING );
-    SetToolTexture( EMPTY_STRING );
-    SetBumpMap1( EMPTY_STRING );
-    SetBumpMap2( EMPTY_STRING );
-    SetEnvMap( EMPTY_STRING );
-    SetEnvMapMask( EMPTY_STRING );
-    SetNormalMap( EMPTY_STRING );
-    SetDuDvMap( EMPTY_STRING );
+  private void resetAllInput () {
+    setShaderIndex( ShaderDefault );
+    setSurface1Index( SurfaceDefault );
+    setSurface2Index( 0 );
+    setKeywords( EMPTY_STRING );
+    setFrameRate( 0 );
+    setBaseTexture1( EMPTY_STRING );
+    setBaseTexture2( EMPTY_STRING );
+    setDetailTexture( EMPTY_STRING );
+    setToolTexture( EMPTY_STRING );
+    setBumpMap1( EMPTY_STRING );
+    setBumpMap2( EMPTY_STRING );
+    setEnvMap( EMPTY_STRING );
+    setEnvMapMask( EMPTY_STRING );
+    setNormalMap( EMPTY_STRING );
+    setDuDvMap( EMPTY_STRING );
 
-    chkAdditive.setSelected( false );
-    chkAlphaTest.setSelected( false );
-    chkEnvMapContrast.setSelected( false );
-    chkEnvMapSaturation.setSelected( false );
-    chkNoCull.setSelected( false );
-    chkNoDecal.setSelected( false );
-    chkVertexAlpha.setSelected( false );
-    chkVertexColor.setSelected( false );
+    setAlpha( 1F );
+    setEnvMapContrast( 0F );
+    setEnvMapSaturation( 0F );
+    setEnvMapFrame( 0 );
+
+    chkFlagAdditive.setSelected( false );
+    chkFlagAlphaTest.setSelected( false );
+    chkFlagIgnoreZ.setSelected( false );
+    chkFlagPhong.setSelected( false );
+    chkFlagNoCull.setSelected( false );
+    chkFlagNoDecal.setSelected( false );
+    chkFlagSelfIllum.setSelected( false );
+    chkFlagVertexAlpha.setSelected( false );
+    chkFlagVertexColor.setSelected( false );
 
     chkCompileClip.setSelected( false );
     chkCompileDetail.setSelected( false );
@@ -1404,8 +1883,278 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     chkCompileTrigger.setSelected( false );
   }
 
-  private void ToggleAllLocks () {
-    boolean locked = !chkLockShader.isSelected();
+  private String selectVTF () {
+    JFileChooser fc = new JFileChooser( txtWorkFolder.getText() );
+    fc.setAcceptAllFileFilterUsed( false );
+    fc.setFileFilter( new FileFilterVTF() );
+    fc.setFileSelectionMode( JFileChooser.FILES_ONLY );
+
+    int result = fc.showOpenDialog( this );
+    if ( JFileChooser.APPROVE_OPTION == result ) {
+      String file = fc.getSelectedFile().getName();
+      return FilenameUtils.separatorsToUnix(
+        FilenameUtils.concat( basePath,
+                              FilenameUtils.getBaseName( file ) ) )
+        .replaceFirst( "/",
+                       "" );
+    }
+
+    return null;
+  }
+
+  private void setAllLocks ( boolean locked ) {
+    chkLockShader.setSelected( locked );
+    cmbShader.setEnabled( !locked );
+    txtShader.setEnabled( !locked & ( 0 == cmbShader.getSelectedIndex() ) );
+
+    chkLockSurface1.setSelected( locked );
+    cmbSurface1.setEnabled( !locked );
+    txtSurface1.setEnabled( !locked & ( 0 == cmbSurface1.getSelectedIndex() ) );
+
+    chkLockSurface2.setSelected( locked );
+    cmbSurface2.setEnabled( !locked );
+    txtSurface2.setEnabled( !locked & ( 1 == cmbSurface2.getSelectedIndex() ) );
+
+    chkLockKeywords.setSelected( locked );
+    txtKeywords.setEnabled( !locked );
+
+    chkLockFrameRate.setSelected( locked );
+    nudFrameRate.setEnabled( !locked & animated );
+
+    chkLockBaseTexture1.setSelected( locked );
+    txtBaseTexture1.setEnabled( !locked );
+    btnBaseTexture1.setEnabled( !locked );
+
+    chkLockBaseTexture2.setSelected( locked );
+    txtBaseTexture2.setEnabled( !locked );
+    btnBaseTexture2.setEnabled( !locked );
+
+    chkLockDetailTexture.setSelected( locked );
+    txtDetailTexture.setEnabled( !locked );
+    btnDetailTexture.setEnabled( !locked );
+
+    chkLockToolTexture.setSelected( locked );
+    txtToolTexture.setEnabled( !locked );
+    btnToolTexture.setEnabled( !locked );
+
+    chkLockBumpMap1.setSelected( locked );
+    txtBumpMap1.setEnabled( !locked );
+    btnBumpMap1.setEnabled( !locked );
+
+    chkLockBumpMap2.setSelected( locked );
+    txtBumpMap2.setEnabled( !locked );
+    btnBumpMap2.setEnabled( !locked );
+
+    chkLockEnvMap.setSelected( locked );
+    txtEnvMap.setEnabled( !locked );
+    btnEnvMap.setEnabled( !locked );
+
+    chkLockEnvMapMask.setSelected( locked );
+    txtEnvMapMask.setEnabled( !locked );
+    btnEnvMapMask.setEnabled( !locked );
+
+    chkLockNormalMap.setSelected( locked );
+    txtNormalMap.setEnabled( !locked );
+    btnNormalMap.setEnabled( !locked );
+
+    chkLockDuDvMap.setSelected( locked );
+    txtDuDvMap.setEnabled( !locked );
+    btnDuDvMap.setEnabled( !locked );
+
+    chkLockAlpha.setSelected( locked );
+    nudAlpha.setEnabled( !locked );
+
+    chkLockEnvMapContrast.setSelected( locked );
+    nudEnvMapContrast.setEnabled( !locked );
+
+    chkLockEnvMapSaturation.setSelected( locked );
+    nudEnvMapSaturation.setEnabled( !locked );
+
+    chkLockEnvMapFrame.setSelected( locked );
+    nudEnvMapFrame.setEnabled( !locked & animated );
+  }
+
+  private void setAlpha ( float i ) {
+    if ( !chkLockAlpha.isSelected() ) {
+      nudAlpha.setValue( i );
+    }
+  }
+
+  private void setBaseTexture1 ( String path ) {
+    if ( !chkLockBaseTexture1.isSelected() ) {
+      txtBaseTexture1.setText( path );
+    }
+  }
+
+  private void setBaseTexture2 ( String path ) {
+    if ( !chkLockBaseTexture2.isSelected() ) {
+      txtBaseTexture2.setText( path );
+    }
+  }
+
+  private void setBumpMap1 ( String path ) {
+    if ( !chkLockBumpMap1.isSelected() ) {
+      txtBumpMap1.setText( path );
+    }
+  }
+
+  private void setBumpMap2 ( String path ) {
+    if ( !chkLockBumpMap2.isSelected() ) {
+      txtBumpMap2.setText( path );
+    }
+  }
+
+  private void setDetailTexture ( String path ) {
+    if ( !chkLockDetailTexture.isSelected() ) {
+      txtDetailTexture.setText( path );
+    }
+  }
+
+  private void setDuDvMap ( String path ) {
+    if ( !chkLockDuDvMap.isSelected() ) {
+      txtDuDvMap.setText( path );
+    }
+  }
+
+  private void setEnvMap ( String path ) {
+    if ( !chkLockEnvMap.isSelected() ) {
+      txtEnvMap.setText( path );
+    }
+  }
+
+  private void setEnvMapContrast ( float val ) {
+    if ( !chkLockEnvMapContrast.isSelected() ) {
+      ( ( SpinnerNumberModel ) nudEnvMapContrast.getModel() ).setValue( val );
+    }
+  }
+
+  private void setEnvMapFrame ( int val ) {
+    if ( !chkLockEnvMapFrame.isSelected() ) {
+      ( ( SpinnerNumberModel ) nudEnvMapFrame.getModel() ).setValue( val );
+    }
+  }
+
+  private void setEnvMapMask ( String path ) {
+    if ( !chkLockEnvMapMask.isSelected() ) {
+      txtEnvMapMask.setText( path );
+    }
+  }
+
+  private void setEnvMapSaturation ( float val ) {
+    if ( !chkLockEnvMapSaturation.isSelected() ) {
+      ( ( SpinnerNumberModel ) nudEnvMapSaturation.getModel() ).setValue( val );
+    }
+  }
+
+  private void setFrameRate ( int i ) {
+    if ( !chkLockFrameRate.isSelected() ) {
+      nudFrameRate.setValue( i );
+    }
+  }
+
+  private void setKeywords ( String keywords ) {
+    if ( !chkLockKeywords.isSelected() ) {
+      txtKeywords.setText( keywords );
+    }
+  }
+
+  private void setNormalMap ( String path ) {
+    if ( !chkLockNormalMap.isSelected() ) {
+      txtNormalMap.setText( path );
+    }
+  }
+
+  private void setShaderIndex ( int i ) {
+    if ( !chkLockSurface1.isSelected() ) {
+      cmbShader.setSelectedIndex( i );
+    }
+  }
+
+  private void setSurface1Index ( int i ) {
+    if ( !chkLockSurface1.isSelected() ) {
+      cmbSurface1.setSelectedIndex( i );
+    }
+  }
+
+  private void setSurface2Index ( int i ) {
+    if ( !chkLockSurface2.isSelected() ) {
+      cmbSurface2.setSelectedIndex( i );
+    }
+  }
+
+  private void setToolTexture ( String path ) {
+    if ( !chkLockToolTexture.isSelected() ) {
+      txtToolTexture.setText( path );
+    }
+  }
+
+  private void showTextureFiles () {
+    DefaultListModel model = ( DefaultListModel ) lstFiles.getModel();
+    model.clear();
+
+    String root = txtRootFolder.getText();
+    String work = txtWorkFolder.getText();
+
+    if ( root.isEmpty() || work.isEmpty() ) {
+      return;
+    }
+
+    basePath = work.replace( root, "" );
+    File dir = new File( work );
+    String full, name, ext;
+
+    if ( chkOnlyMissing.isSelected() ) {
+      List<String> fileVTF = new ArrayList<>();
+      List<String> fileVMT = new ArrayList<>();
+
+      for ( File file : dir.listFiles() ) {
+        if ( file.isFile() ) {
+          full = file.getName();
+          //name = FilenameUtils.getBaseName( full );
+          ext = FilenameUtils.getExtension( full );
+
+          if ( ext.equalsIgnoreCase( "vtf" ) ) {
+            fileVTF.add( full );
+          } else if ( ext.equalsIgnoreCase( "vmt" ) ) {
+            fileVMT.add( full );
+          }
+        }
+      }
+
+      String baseName;
+      Iterator<String> itr;
+      boolean matched;
+      for ( String file : fileVTF ) {
+        baseName = FilenameUtils.getBaseName( file );
+        itr = fileVMT.iterator();
+        matched = false;
+        while ( itr.hasNext() ) {
+          if ( FilenameUtils.getBaseName( itr.next() ).equalsIgnoreCase(
+            baseName ) ) {
+            matched = true;
+            break;
+          }
+        }
+
+        if ( !matched ) {
+          model.addElement( file );
+        }
+      }
+    } else {
+      for ( File file : dir.listFiles() ) {
+        name = file.getName();
+        ext = FilenameUtils.getExtension( name );
+        if ( file.isFile() && ext.equalsIgnoreCase( "vtf" ) ) {
+          model.addElement( name );
+        }
+      }
+    }
+  }
+
+  private void toggleAllLocks () {
+    boolean locked;
+
+    locked = !chkLockShader.isSelected();
     chkLockShader.setSelected( locked );
     cmbShader.setEnabled( !locked );
     txtShader.setEnabled( !locked & ( 0 == cmbShader.getSelectedIndex() ) );
@@ -1477,496 +2226,46 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
     chkLockDuDvMap.setSelected( locked );
     txtDuDvMap.setEnabled( !locked );
     btnDuDvMap.setEnabled( !locked );
+
+    locked = !chkLockAlpha.isSelected();
+    chkLockAlpha.setSelected( locked );
+    nudAlpha.setEnabled( !locked );
+
+    locked = !chkLockEnvMapContrast.isSelected();
+    chkLockEnvMapContrast.setSelected( locked );
+    nudEnvMapContrast.setEnabled( !locked );
+
+    locked = !chkLockEnvMapSaturation.isSelected();
+    chkLockEnvMapSaturation.setSelected( locked );
+    nudEnvMapSaturation.setEnabled( !locked );
+
+    locked = !chkLockEnvMapFrame.isSelected();
+    chkLockEnvMapFrame.setSelected( locked );
+    nudEnvMapFrame.setEnabled( !locked & animated );
   }
 
-  private void SetAllLocks ( boolean locked ) {
-    chkLockShader.setSelected( locked );
-    cmbShader.setEnabled( !locked );
-    txtShader.setEnabled( !locked & ( 0 == cmbShader.getSelectedIndex() ) );
-
-    chkLockSurface1.setSelected( locked );
-    cmbSurface1.setEnabled( !locked );
-    txtSurface1.setEnabled( !locked & ( 0 == cmbSurface1.getSelectedIndex() ) );
-
-    chkLockSurface2.setSelected( locked );
-    cmbSurface2.setEnabled( !locked );
-    txtSurface2.setEnabled( !locked & ( 1 == cmbSurface2.getSelectedIndex() ) );
-
-    chkLockKeywords.setSelected( locked );
-    txtKeywords.setEnabled( !locked );
-
-    chkLockFrameRate.setSelected( locked );
-    nudFrameRate.setEnabled( !locked & animated );
-
-    chkLockBaseTexture1.setSelected( locked );
-    txtBaseTexture1.setEnabled( !locked );
-    btnBaseTexture1.setEnabled( !locked );
-
-    chkLockBaseTexture2.setSelected( locked );
-    txtBaseTexture2.setEnabled( !locked );
-    btnBaseTexture2.setEnabled( !locked );
-
-    chkLockDetailTexture.setSelected( locked );
-    txtDetailTexture.setEnabled( !locked );
-    btnDetailTexture.setEnabled( !locked );
-
-    chkLockToolTexture.setSelected( locked );
-    txtToolTexture.setEnabled( !locked );
-    btnToolTexture.setEnabled( !locked );
-
-    chkLockBumpMap1.setSelected( locked );
-    txtBumpMap1.setEnabled( !locked );
-    btnBumpMap1.setEnabled( !locked );
-
-    chkLockBumpMap2.setSelected( locked );
-    txtBumpMap2.setEnabled( !locked );
-    btnBumpMap2.setEnabled( !locked );
-
-    chkLockEnvMap.setSelected( locked );
-    txtEnvMap.setEnabled( !locked );
-    btnEnvMap.setEnabled( !locked );
-
-    chkLockEnvMapMask.setSelected( locked );
-    txtEnvMapMask.setEnabled( !locked );
-    btnEnvMapMask.setEnabled( !locked );
-
-    chkLockNormalMap.setSelected( locked );
-    txtNormalMap.setEnabled( !locked );
-    btnNormalMap.setEnabled( !locked );
-
-    chkLockDuDvMap.setSelected( locked );
-    txtDuDvMap.setEnabled( !locked );
-    btnDuDvMap.setEnabled( !locked );
-  }
-
-  private String SelectVTF () {
-    JFileChooser fc = new JFileChooser( txtWorkFolder.getText() );
-    fc.setAcceptAllFileFilterUsed( false );
-    fc.setFileFilter( new FileFilterVTF() );
-    fc.setFileSelectionMode( JFileChooser.FILES_ONLY );
-
-    int result = fc.showOpenDialog( this );
-    if ( JFileChooser.APPROVE_OPTION == result ) {
-      String file = fc.getSelectedFile().getName();
-      return FilenameUtils.separatorsToUnix(
-        FilenameUtils.concat( basePath,
-                              FilenameUtils.getBaseName( file ) ) )
-        .replaceFirst( "/", "" );
-    }
-
-    return null;
-  }
-
-  private void ShowTextureFiles () {
-    DefaultListModel model = ( DefaultListModel ) lstFiles.getModel();
-    model.clear();
-
-    String root = txtRootFolder.getText();
-    String work = txtWorkFolder.getText();
-
-    if ( root.isEmpty() || work.isEmpty() ) {
-      return;
-    }
-
-    basePath = work.replace( root, "" );
-    File dir = new File( work );
-    String full, name, ext;
-
-    if ( chkOnlyMissing.isSelected() ) {
-      List<String> fileVTF = new ArrayList<>();
-      List<String> fileVMT = new ArrayList<>();
-
-      for ( File file : dir.listFiles() ) {
-        if ( file.isFile() ) {
-          full = file.getName();
-          name = FilenameUtils.getBaseName( full );
-          ext = FilenameUtils.getExtension( full );
-
-          if ( ext.equalsIgnoreCase( "vtf" ) ) {
-            fileVTF.add( full );
-          } else if ( ext.equalsIgnoreCase( "vmt" ) ) {
-            fileVMT.add( full );
-          }
-        }
+  private void writeKeyValue ( boolean condition, PrintWriter out, String key,
+                               String value, int padding ) {
+    if ( condition ) {
+      out.printf( "\t\"%s\"", key );
+      for ( int i = 0; i < padding; i++ ) {
+        out.print( "\t" );
       }
-
-      String baseName;
-      Iterator<String> itr;
-      boolean matched;
-      for ( String file : fileVTF ) {
-        baseName = FilenameUtils.getBaseName( file );
-        itr = fileVMT.iterator();
-        matched = false;
-        while ( itr.hasNext() ) {
-          if ( FilenameUtils.getBaseName( itr.next() ).equalsIgnoreCase( baseName ) ) {
-            matched = true;
-            break;
-          }
-        }
-
-        if ( !matched ) {
-          model.addElement( file );
-        }
-      }
-    } else {
-      for ( File file : dir.listFiles() ) {
-        name = file.getName();
-        ext = FilenameUtils.getExtension( name );
-        if ( file.isFile() && ext.equalsIgnoreCase( "vtf" ) ) {
-          model.addElement( name );
-        }
-      }
+      out.printf( "\"%s\"%n", value );
     }
   }
 
-  private void SetShaderIndex ( int i ) {
-    if ( !chkLockSurface1.isSelected() ) {
-      cmbShader.setSelectedIndex( i );
-    }
+  private void writeSpinner ( PrintWriter out, JSpinner spinner,
+                              Number defaultValue, String key, int padding ) {
+
+    Number value = ( ( SpinnerNumberModel ) spinner.getModel() ).getNumber();
+    writeKeyValue( !defaultValue.equals( value ), out,
+                   key, value.toString(), padding );
   }
-
-  private void SetSurface1Index ( int i ) {
-    if ( !chkLockSurface1.isSelected() ) {
-      cmbSurface1.setSelectedIndex( i );
-    }
-  }
-
-  private void SetSurface2Index ( int i ) {
-    if ( !chkLockSurface2.isSelected() ) {
-      cmbSurface2.setSelectedIndex( i );
-    }
-  }
-
-  private void SetKeywords ( String keywords ) {
-    if ( !chkLockKeywords.isSelected() ) {
-      txtKeywords.setText( keywords );
-    }
-  }
-
-  private void SetFrameRate ( int i ) {
-    if ( !chkLockFrameRate.isSelected() ) {
-      nudFrameRate.setValue( i );
-    }
-  }
-
-  private void SetBaseTexture1 ( String path ) {
-    if ( !chkLockBaseTexture1.isSelected() ) {
-      txtBaseTexture1.setText( path );
-    }
-  }
-
-  private void SetBaseTexture2 ( String path ) {
-    if ( !chkLockBaseTexture2.isSelected() ) {
-      txtBaseTexture2.setText( path );
-    }
-  }
-
-  private void SetDetailTexture ( String path ) {
-    if ( !chkLockDetailTexture.isSelected() ) {
-      txtDetailTexture.setText( path );
-    }
-  }
-
-  private void SetToolTexture ( String path ) {
-    if ( !chkLockToolTexture.isSelected() ) {
-      txtToolTexture.setText( path );
-    }
-  }
-
-  private void SetBumpMap1 ( String path ) {
-    if ( !chkLockBumpMap1.isSelected() ) {
-      txtBumpMap1.setText( path );
-    }
-  }
-
-  private void SetBumpMap2 ( String path ) {
-    if ( !chkLockBumpMap2.isSelected() ) {
-      txtBumpMap2.setText( path );
-    }
-  }
-
-  private void SetEnvMap ( String path ) {
-    if ( !chkLockEnvMap.isSelected() ) {
-      txtEnvMap.setText( path );
-    }
-  }
-
-  private void SetEnvMapMask ( String path ) {
-    if ( !chkLockEnvMapMask.isSelected() ) {
-      txtEnvMapMask.setText( path );
-    }
-  }
-
-  private void SetNormalMap ( String path ) {
-    if ( !chkLockNormalMap.isSelected() ) {
-      txtNormalMap.setText( path );
-    }
-  }
-
-  private void SetDuDvMap ( String path ) {
-    if ( !chkLockDuDvMap.isSelected() ) {
-      txtDuDvMap.setText( path );
-    }
-  }
-
-  private void btnRootFolderBrowseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRootFolderBrowseActionPerformed
-    JFileChooser fc = new JFileChooser();
-    fc.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
-    int result = fc.showOpenDialog( this );
-    if ( JFileChooser.APPROVE_OPTION == result ) {
-      rootPath = fc.getSelectedFile().getAbsolutePath();
-      txtRootFolder.setText( rootPath );
-      preferences.put( pref_ROOT, rootPath );
-      ShowTextureFiles();
-    }
-  }//GEN-LAST:event_btnRootFolderBrowseActionPerformed
-
-  private void btnWorkFolderBrowseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWorkFolderBrowseActionPerformed
-    File dir = new File( rootPath );
-    JFileChooser fc = new JFileChooser( dir );
-    fc.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
-    int result = fc.showOpenDialog( this );
-    if ( JFileChooser.APPROVE_OPTION == result ) {
-      workPath = fc.getSelectedFile().getAbsolutePath();
-      txtWorkFolder.setText( workPath );
-      preferences.put( pref_WORK, workPath );
-      ShowTextureFiles();
-    }
-  }//GEN-LAST:event_btnWorkFolderBrowseActionPerformed
-
-  private void cmbShaderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbShaderActionPerformed
-    txtShader.setEnabled( 0 == cmbShader.getSelectedIndex() );
-  }//GEN-LAST:event_cmbShaderActionPerformed
-
-  private void cmbSurface1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbSurface1ActionPerformed
-    txtSurface1.setEnabled( 1 == cmbSurface1.getSelectedIndex() );
-  }//GEN-LAST:event_cmbSurface1ActionPerformed
-
-  private void cmbSurface2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbSurface2ActionPerformed
-    txtSurface2.setEnabled( 1 == cmbSurface2.getSelectedIndex() );
-  }//GEN-LAST:event_cmbSurface2ActionPerformed
-
-  private void chkOnlyMissingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkOnlyMissingActionPerformed
-    ShowTextureFiles();
-  }//GEN-LAST:event_chkOnlyMissingActionPerformed
-
-  private void chkLockShaderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockShaderActionPerformed
-    cmbShader.setEnabled( !chkLockShader.isSelected() );
-    txtShader.setEnabled( !chkLockShader.isSelected() & ( 0 == cmbShader.getSelectedIndex() ) );
-  }//GEN-LAST:event_chkLockShaderActionPerformed
-
-  private void chkLockSurface1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockSurface1ActionPerformed
-    cmbSurface1.setEnabled( !chkLockSurface1.isSelected() );
-    txtSurface1.setEnabled( !chkLockSurface1.isSelected() & ( 1 == cmbSurface1.getSelectedIndex() ) );
-  }//GEN-LAST:event_chkLockSurface1ActionPerformed
-
-  private void chkLockSurface2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockSurface2ActionPerformed
-    cmbSurface2.setEnabled( !chkLockSurface2.isSelected() );
-    txtSurface2.setEnabled( !chkLockSurface2.isSelected() & ( 1 == cmbSurface2.getSelectedIndex() ) );
-  }//GEN-LAST:event_chkLockSurface2ActionPerformed
-
-  private void chkLockKeywordsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockKeywordsActionPerformed
-    txtKeywords.setEnabled( !chkLockKeywords.isSelected() );
-  }//GEN-LAST:event_chkLockKeywordsActionPerformed
-
-  private void chkLockFrameRateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockFrameRateActionPerformed
-    nudFrameRate.setEnabled( !chkLockFrameRate.isSelected() );
-  }//GEN-LAST:event_chkLockFrameRateActionPerformed
-
-  private void chkLockBaseTexture1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockBaseTexture1ActionPerformed
-    txtBaseTexture1.setEnabled( !chkLockBaseTexture1.isSelected() );
-    btnBaseTexture1.setEnabled( !chkLockBaseTexture1.isSelected() );
-  }//GEN-LAST:event_chkLockBaseTexture1ActionPerformed
-
-  private void chkLockBaseTexture2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockBaseTexture2ActionPerformed
-    txtBaseTexture2.setEnabled( !chkLockBaseTexture2.isSelected() );
-    btnBaseTexture2.setEnabled( !chkLockBaseTexture2.isSelected() );
-  }//GEN-LAST:event_chkLockBaseTexture2ActionPerformed
-
-  private void chkLockDetailTextureActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockDetailTextureActionPerformed
-    txtDetailTexture.setEnabled( !chkLockDetailTexture.isSelected() );
-    btnDetailTexture.setEnabled( !chkLockDetailTexture.isSelected() );
-  }//GEN-LAST:event_chkLockDetailTextureActionPerformed
-
-  private void chkLockToolTextureActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockToolTextureActionPerformed
-    txtToolTexture.setEnabled( !chkLockToolTexture.isSelected() );
-    btnToolTexture.setEnabled( !chkLockToolTexture.isSelected() );
-  }//GEN-LAST:event_chkLockToolTextureActionPerformed
-
-  private void chkLockBumpMap1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockBumpMap1ActionPerformed
-    txtBumpMap1.setEnabled( !chkLockBumpMap1.isSelected() );
-    btnBumpMap1.setEnabled( !chkLockBumpMap1.isSelected() );
-  }//GEN-LAST:event_chkLockBumpMap1ActionPerformed
-
-  private void chkLockBumpMap2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockBumpMap2ActionPerformed
-    txtBumpMap2.setEnabled( !chkLockBumpMap2.isSelected() );
-    btnBumpMap2.setEnabled( !chkLockBumpMap2.isSelected() );
-  }//GEN-LAST:event_chkLockBumpMap2ActionPerformed
-
-  private void chkLockEnvMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockEnvMapActionPerformed
-    txtEnvMap.setEnabled( !chkLockEnvMap.isSelected() );
-    btnEnvMap.setEnabled( !chkLockEnvMap.isSelected() );
-  }//GEN-LAST:event_chkLockEnvMapActionPerformed
-
-  private void chkLockEnvMapMaskActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockEnvMapMaskActionPerformed
-    txtEnvMapMask.setEnabled( !chkLockEnvMapMask.isSelected() );
-    btnEnvMapMask.setEnabled( !chkLockEnvMapMask.isSelected() );
-  }//GEN-LAST:event_chkLockEnvMapMaskActionPerformed
-
-  private void chkLockNormalMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockNormalMapActionPerformed
-    txtNormalMap.setEnabled( !chkLockNormalMap.isSelected() );
-    btnNormalMap.setEnabled( !chkLockNormalMap.isSelected() );
-  }//GEN-LAST:event_chkLockNormalMapActionPerformed
-
-  private void chkLockDuDvMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkLockDuDvMapActionPerformed
-    txtDuDvMap.setEnabled( !chkLockDuDvMap.isSelected() );
-    btnDuDvMap.setEnabled( !chkLockDuDvMap.isSelected() );
-  }//GEN-LAST:event_chkLockDuDvMapActionPerformed
-
-  private void btnBaseTexture1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBaseTexture1ActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetBaseTexture1( path );
-    }
-  }//GEN-LAST:event_btnBaseTexture1ActionPerformed
-
-  private void btnBaseTexture2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBaseTexture2ActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetBaseTexture2( path );
-    }
-  }//GEN-LAST:event_btnBaseTexture2ActionPerformed
-
-  private void btnDetailTextureActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDetailTextureActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetDetailTexture( path );
-    }
-  }//GEN-LAST:event_btnDetailTextureActionPerformed
-
-  private void btnToolTextureActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnToolTextureActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetToolTexture( path );
-    }
-  }//GEN-LAST:event_btnToolTextureActionPerformed
-
-  private void btnBumpMap1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBumpMap1ActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetBumpMap1( path );
-    }
-  }//GEN-LAST:event_btnBumpMap1ActionPerformed
-
-  private void btnBumpMap2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBumpMap2ActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetBumpMap2( path );
-    }
-  }//GEN-LAST:event_btnBumpMap2ActionPerformed
-
-  private void btnEnvMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEnvMapActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetEnvMap( path );
-    }
-  }//GEN-LAST:event_btnEnvMapActionPerformed
-
-  private void btnEnvMapMaskActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEnvMapMaskActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetEnvMapMask( path );
-    }
-  }//GEN-LAST:event_btnEnvMapMaskActionPerformed
-
-  private void btnNormalMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNormalMapActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetNormalMap( path );
-    }
-  }//GEN-LAST:event_btnNormalMapActionPerformed
-
-  private void btnDuDvMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDuDvMapActionPerformed
-    String path = SelectVTF();
-    if ( null != path ) {
-      SetDuDvMap( path );
-    }
-  }//GEN-LAST:event_btnDuDvMapActionPerformed
-
-  private void lstFilesValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_lstFilesValueChanged
-    if ( !evt.getValueIsAdjusting() && ( -1 != lstFiles.getSelectedIndex() ) ) {
-      String file = lstFiles.getSelectedValue().toString();
-
-      // set keywords based on file name
-      SetKeywords( FilenameUtils.getBaseName( file ).replace( "_", "," ).replace( "-", "," ) );
-
-      String path = FilenameUtils.separatorsToUnix(
-        FilenameUtils.concat( basePath,
-                              FilenameUtils.getBaseName( file ) ) )
-        .replaceFirst( "/", "" );
-
-      SetBaseTexture1( path );
-
-      // read the vtf header
-      file = FilenameUtils.concat( workPath, file );
-      File fileVTF = new File( file );
-
-      try ( LittleEndianDataInputStream in = new LittleEndianDataInputStream(
-        new FileInputStream( fileVTF ) ) ) {
-
-        int sig = in.readInt();
-        if ( SIGNATURE_VTF != sig ) {
-          throw new IOException( "Not a VTF file" );
-        }
-
-        in.skipBytes( 16 );
-        int flags = in.readInt();
-        short frames = in.readShort();
-        in.close(); // don't need any more information
-
-        chkNoLOD.setSelected( 0 != ( 0x200 & flags ) );
-        chkTranslucent.setSelected( 0 != ( 0x3000 & flags ) );
-
-        if ( 1 < frames ) {
-          SetFrameRate( frames );
-          nudFrameRate.setEnabled( !chkLockFrameRate.isSelected() );
-          chkLockFrameRate.setEnabled( animated = true );
-        } else {
-          nudFrameRate.setEnabled( false );
-          chkLockFrameRate.setEnabled( animated = false );
-        }
-      } catch ( FileNotFoundException ex ) {
-        logger.log( Level.SEVERE, null, ex );
-      } catch ( IOException ex ) {
-        logger.log( Level.SEVERE, null, ex );
-      }
-    }
-  }//GEN-LAST:event_lstFilesValueChanged
-
   /**
-   @param args the command line arguments
+   @param args
+               the command line arguments
    */
-  public static void main ( String args[] ) {
-    try {
-      javax.swing.UIManager.setLookAndFeel( javax.swing.UIManager.getCrossPlatformLookAndFeelClassName() );
-
-
-
-
-    } catch ( ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex ) {
-      Logger.getLogger( GUI.class
-        .getName() ).log( Level.SEVERE, null, ex );
-    }
-
-    /*
-     Create and display the form
-     */ java.awt.EventQueue.invokeLater( new Runnable() {
-      @Override
-      public void run () {
-        new GUI().setVisible( true );
-      }
-    } );
-  }
   // Variables declaration - do not modify//GEN-BEGIN:variables
   private javax.swing.JButton btnBaseTexture1;
   private javax.swing.JButton btnBaseTexture2;
@@ -1980,8 +2279,6 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JButton btnRootFolderBrowse;
   private javax.swing.JButton btnToolTexture;
   private javax.swing.JButton btnWorkFolderBrowse;
-  private javax.swing.JCheckBox chkAdditive;
-  private javax.swing.JCheckBox chkAlphaTest;
   private javax.swing.JCheckBox chkCompileClip;
   private javax.swing.JCheckBox chkCompileDetail;
   private javax.swing.JCheckBox chkCompileFog;
@@ -1998,8 +2295,17 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JCheckBox chkCompileSkip;
   private javax.swing.JCheckBox chkCompileSky;
   private javax.swing.JCheckBox chkCompileTrigger;
-  private javax.swing.JCheckBox chkEnvMapContrast;
-  private javax.swing.JCheckBox chkEnvMapSaturation;
+  private javax.swing.JCheckBox chkFlagAdditive;
+  private javax.swing.JCheckBox chkFlagAlphaTest;
+  private javax.swing.JCheckBox chkFlagIgnoreZ;
+  private javax.swing.JCheckBox chkFlagNoCull;
+  private javax.swing.JCheckBox chkFlagNoDecal;
+  private javax.swing.JCheckBox chkFlagNoLOD;
+  private javax.swing.JCheckBox chkFlagPhong;
+  private javax.swing.JCheckBox chkFlagSelfIllum;
+  private javax.swing.JCheckBox chkFlagTranslucent;
+  private javax.swing.JCheckBox chkFlagVertexAlpha;
+  private javax.swing.JCheckBox chkFlagVertexColor;
   private javax.swing.JCheckBox chkLockAlpha;
   private javax.swing.JCheckBox chkLockBaseTexture1;
   private javax.swing.JCheckBox chkLockBaseTexture2;
@@ -2008,7 +2314,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JCheckBox chkLockDetailTexture;
   private javax.swing.JCheckBox chkLockDuDvMap;
   private javax.swing.JCheckBox chkLockEnvMap;
+  private javax.swing.JCheckBox chkLockEnvMapContrast;
+  private javax.swing.JCheckBox chkLockEnvMapFrame;
   private javax.swing.JCheckBox chkLockEnvMapMask;
+  private javax.swing.JCheckBox chkLockEnvMapSaturation;
   private javax.swing.JCheckBox chkLockFrameRate;
   private javax.swing.JCheckBox chkLockKeywords;
   private javax.swing.JCheckBox chkLockNormalMap;
@@ -2016,13 +2325,7 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JCheckBox chkLockSurface1;
   private javax.swing.JCheckBox chkLockSurface2;
   private javax.swing.JCheckBox chkLockToolTexture;
-  private javax.swing.JCheckBox chkNoCull;
-  private javax.swing.JCheckBox chkNoDecal;
-  private javax.swing.JCheckBox chkNoLOD;
   private javax.swing.JCheckBox chkOnlyMissing;
-  private javax.swing.JCheckBox chkTranslucent;
-  private javax.swing.JCheckBox chkVertexAlpha;
-  private javax.swing.JCheckBox chkVertexColor;
   private javax.swing.JComboBox cmbShader;
   private javax.swing.JComboBox cmbSurface1;
   private javax.swing.JComboBox cmbSurface2;
@@ -2042,7 +2345,10 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JLabel jLabel21;
   private javax.swing.JLabel jLabel22;
   private javax.swing.JLabel jLabel23;
+  private javax.swing.JLabel jLabel24;
   private javax.swing.JLabel jLabel25;
+  private javax.swing.JLabel jLabel26;
+  private javax.swing.JLabel jLabel27;
   private javax.swing.JLabel jLabel3;
   private javax.swing.JLabel jLabel4;
   private javax.swing.JLabel jLabel5;
@@ -2052,9 +2358,13 @@ public class GUI extends javax.swing.JFrame implements KeyEventDispatcher {
   private javax.swing.JLabel jLabel9;
   private javax.swing.JPanel jPanel1;
   private javax.swing.JPanel jPanel2;
+  private javax.swing.JPanel jPanel3;
   private javax.swing.JScrollPane jScrollPane1;
   private javax.swing.JList lstFiles;
   private javax.swing.JSpinner nudAlpha;
+  private javax.swing.JSpinner nudEnvMapContrast;
+  private javax.swing.JSpinner nudEnvMapFrame;
+  private javax.swing.JSpinner nudEnvMapSaturation;
   private javax.swing.JSpinner nudFrameRate;
   private javax.swing.JPanel panFiles;
   private javax.swing.JPanel panFlags;
